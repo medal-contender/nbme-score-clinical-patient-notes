@@ -1,0 +1,63 @@
+program_param:
+  wandb_key: 
+  project_name: jigsaw
+  seed: 42
+
+data_param:
+  dir_name: jigsaw-toxic-severity-rating
+  train_file_name: added_data.csv
+  infer_file_name: comments_to_score.csv
+  valid_file_name: toxic_task.csv
+  do_score_check: False
+
+model_param:
+  model_name: bert
+  max_length: 128
+  scheduler: cos_ann
+  mix_precision: True
+  num_classes: 1
+  device: cuda
+  drop_p: 0.2
+  is_extra_attn: True
+  is_deeper_attn: True
+
+train_param:
+  epochs: 4
+  lr: 1e-4
+  min_lr: 1e-6
+  max_lr: 0.1
+  weight_decay: 1e-6
+  num_folds: 5
+  accumulate_grad_batches: 3
+  ranking_margin: 0.5
+  batch_size: 16
+  T_max: 500
+  T_0: 50
+  save_dir: checkpoint/bert
+  loss: margin_ranking_loss
+  num_workers: 6
+  shuffle: True
+  pin_memory: True
+  drop_last: False
+  reduce_ratio: 0.95
+  step_size: 10
+  gamma: 0.5 
+  milestones: [30,80]
+  base_lr: 5e-5
+  step_size_up: 5 
+  steps_per_epoch: 1000
+  is_skf: False
+
+valid_param:
+  batch_size: 64
+  num_workers: 2
+  shuffle: False
+  pin_memory: True
+  
+infer_param:
+  batch_size: 64
+  num_workers: 2
+  shuffle: False
+  pin_memory: True
+  checkpoint_path: checkpoint/bert/bert.bin
+  save_dir: /jigsaw/output/bert
