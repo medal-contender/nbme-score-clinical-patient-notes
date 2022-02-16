@@ -1,4 +1,4 @@
-# Jigsaw Rate Severity Of Toxic Comments
+# NBME - Score Clinical Patient Notes
 ---
 <p align="center">
   <img src="./images/nbme.png" width=550>
@@ -20,15 +20,13 @@
 
 ## Competition Overview
 
-### Problem
-- Please Fill In
-### Dataset
-- Ruddit Dataset
-- Jigsaw Rate Severity of Toxic Comments
-- toxic-task
+In this competition, you’ll identify specific clinical concepts in patient notes. Specifically, you'll develop an automated method to map clinical concepts from an exam rubric (e.g., “diminished appetite”) to various ways in which these concepts are expressed in clinical patient notes written by medical students (e.g., “eating less,” “clothes fit looser”). Great solutions will be both accurate and reliable.
+
+If successful, you'll help tackle the biggest practical barriers in patient note scoring, making the approach more transparent, interpretable, and easing the development and administration of such assessments. As a result, medical practitioners will be able to explore the full potential of patient notes to reveal information relevant to clinical skills assessment.
+
 ### Due Date
-- Team Merge Deadline - 2022/01/31
-- Submission Deadline - 2022/02/07
+- Team Merge Deadline - April 26, 2022
+- Submission Deadline - May 3, 2022
 
 ---
 
@@ -41,11 +39,11 @@ $ sh ./download_pretrained_models.sh
 
 - Train
 ```shell
-$ cd /jigsaw-toxic-severity-rating/jigsaw_toxic_severity_rating
+$ cd /nbme-score-clinical-patient-notes/nbme
 $ python3 run_train.py \
-          "--config-file", "/jigsaw-toxic-severity-rating/configs/roberta.yaml", \
+          "--config-file", "nbme-score-clinical-patient-notes/configs/deberta.yaml", \
           "--train", \
-          "--training-keyword", "roberta-test"
+          "--training-keyword", "deberta-test"
 ```
 
 ## Requirements
