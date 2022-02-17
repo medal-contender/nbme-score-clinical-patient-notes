@@ -62,12 +62,12 @@ Pytorch version may vary depanding on your hardware configurations.
 ### Installation with virtual environment (Windows)
 
 ```bash
-git clone https://github.com/medal-challenger/jigsaw-rate-severity-of-toxic-comments.git
-conda create -n jigsaw python=3.8
-activate jigsaw
+git clone https://github.com/medal-contender/nbme-score-clinical-patient-notes.git
+conda create -n nbme python=3.7
+activate nbme
 # PyTorch installation process may vary depending on your hardware
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
-cd jigsaw-rate-severity-of-toxic-comments
+cd nbme-score-clinical-patient-notes
 pip install -r requirements.txt
 ```
 
