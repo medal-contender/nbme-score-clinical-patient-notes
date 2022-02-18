@@ -1,5 +1,5 @@
 program_param:
-  wandb_key:
+  wandb_key: b41fa9bf3a38422dafc16e253d84694489607e9f
   project_name: nbme
   seed: 42
 

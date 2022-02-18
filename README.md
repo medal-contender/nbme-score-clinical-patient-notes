@@ -64,7 +64,7 @@ Pytorch version may vary depanding on your hardware configurations.
 ```bash
 git clone https://github.com/medal-contender/nbme-score-clinical-patient-notes.git
 conda create -n nbme python=3.7
-activate nbme
+conda activate nbme
 # PyTorch installation process may vary depending on your hardware
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 cd nbme-score-clinical-patient-notes
