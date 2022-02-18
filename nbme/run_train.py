@@ -73,7 +73,7 @@ def run_training(
         # eval
         avg_val_loss, predictions = valid_fn(
             CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
-        
+
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -116,7 +116,7 @@ def run_training(
 
         print()
 
-    predictions = torch.load(PATH, 
+    predictions = torch.load(PATH,
                              map_location=torch.device('cpu'))['predictions']
     val_folds[[i for i in range(CFG.max_len)]] = predictions
 
@@ -250,7 +250,7 @@ def main(CFG):
         print()
 
     # Prediction for oof save
-    oof_df_ = oof_df_.reset_index(drop=True)    
+    oof_df_ = oof_df_.reset_index(drop=True)
     oof_df_.to_pickle(root_save_dir +'/deberta/oof_df.pkl')
 
 if __name__ == '__main__':
