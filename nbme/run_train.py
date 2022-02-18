@@ -10,10 +10,11 @@ from transformers import AutoTokenizer, AdamW
 from collections import defaultdict
 from medal_contender.utils import (
     id_generator, set_seed, get_train, get_folded_dataframe, ConfigManager,
-    get_score, create_labels_for_scoring
+    get_score, create_labels_for_scoring, get_maxlen
 )
+from medal_contender.preprocessing import preprocessing_incorrect
 from medal_contender.configs import BERT_MODEL_LIST
-from medal_contender.dataset import prepare_loaders, get_maxlen
+from medal_contender.dataset import prepare_loaders
 from medal_contender.model import NBMEModel, fetch_scheduler, get_optimizer_params
 from medal_contender.train import (
     train_fn, valid_fn, get_predictions, get_char_probs, get_results
@@ -54,7 +55,7 @@ def run_training(
         print("[INFO] Using GPU: {}\n".format(torch.cuda.get_device_name()))
 
     start = time.time()
-    best_score = 0
+    best_score = 0.
     history = defaultdict(list)
     best_file = None
     criterion = nn.BCEWithLogitsLoss(reduction="none")
@@ -70,7 +71,7 @@ def run_training(
         # eval
         avg_val_loss, predictions = valid_fn(
             CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
-
+        
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -93,9 +94,9 @@ def run_training(
         })
 
         # 베스트 모델 저장
-        if score >= best_score:
+        if score > best_score:
             print(
-                f"{blue_font}Validation Loss Improved ({best_score} ---> {score})")
+                f"{blue_font}Find Best Score ({best_score} ---> {score})")
             best_score = score
             # 이전 베스트 모델 삭제
             if best_file is None:
@@ -108,7 +109,7 @@ def run_training(
             PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_score:.4f}.pth"
             # 모델 저장
             torch.save(model.state_dict(), PATH)
-            print(f"{red_font}Model Saved{reset_all}")
+            print(f"{red_font} Best Score {best_score} Model Saved{reset_all}")
 
         print()
 
@@ -153,7 +154,10 @@ def main(CFG):
     # train_csv = os.path.join(root_data_dir,cfg.data_param.train_file_name)
 
     # 데이터프레임
-    train_df = get_train()
+    train_df, features, patient_notes = get_train()
+
+    # 데이터 전처리
+    train_df = preprocessing_incorrect(train_df)
 
     # K Fold
     train_df = get_folded_dataframe(
@@ -161,7 +165,7 @@ def main(CFG):
         CFG.train_param.n_fold,
     )
 
-    CFG.max_len = get_maxlen(train_df, CFG)
+    CFG.max_len = get_maxlen(features, patient_notes, CFG)
     # train_df.to_csv('../input/train_df.csv')
 
     # 학습 진행
@@ -182,7 +186,7 @@ def main(CFG):
         )
 
         train_loader, valid_loader, valid_texts, valid_labels, valid_fold_len, train_fold_len = \
-            prepare_loaders(train_df, CFG)
+            prepare_loaders(train_df, CFG, fold)
 
         model = NBMEModel(CFG, config_path=None, pretrained=True)
         model.to(CFG.model_param.device)

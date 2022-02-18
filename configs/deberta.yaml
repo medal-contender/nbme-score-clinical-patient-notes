@@ -8,7 +8,7 @@ data_param:
 
 model_param:
   model_name: deberta
-  scheduler: cos_ann_warm
+  scheduler: cosine
   mix_precision: True
   num_classes: 1
   num_cycles: 0.5
@@ -19,8 +19,8 @@ model_param:
   is_deeper_attn: True
 
 train_param:
-  epochs: 3
-  lr: 1e-4
+  epochs: 1
+  lr: 2e-5
   max_lr: 0.1
   min_lr: 1e-6
   encoder_lr: 2e-5
@@ -31,7 +31,7 @@ train_param:
   fc_dropout: 0.2
   max_len:
   weight_decay: 0.01
-  gradient_accumulation_steps: 2
+  gradient_accumulation_steps: 1
   max_grad_norm: 1000
   num_workers: 0
   n_fold: 5
@@ -55,5 +55,5 @@ infer_param:
   num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/deberta/roberta.bin
+  checkpoint_path: checkpoint/deberta/deberta.bin
   save_dir: /jigsaw/output/deberta

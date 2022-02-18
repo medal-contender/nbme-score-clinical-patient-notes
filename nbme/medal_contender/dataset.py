@@ -4,7 +4,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from tqdm.auto import tqdm
 
-
 def prepare_input(CFG, text, feature_text):
     inputs = CFG.tokenizer(
         text, feature_text,
@@ -91,22 +90,7 @@ class TrainDataset(Dataset):
         return inputs, label
 
 
-def get_maxlen(dataframe, cfg):
-    len_li = []
-    for text_col in ['pn_history', 'feature_text']:
-        text_len = []
-        tk0 = tqdm(dataframe[text_col].fillna("").values,
-                   total=len(dataframe), desc=f'get max length for {text_col}')
-        for text in tk0:
-            length = len(
-                cfg.tokenizer(text, add_special_tokens=False)['input_ids'])
-            text_len.append(length)
-        len_li.append(text_len)
-    # cls & sep & sep
-    return max(len_li[0]) + max(len_li[1]) + 3
-
-
-def prepare_loaders(dataframe, CFG, fold=1):
+def prepare_loaders(dataframe, CFG, fold):
     train_folds = dataframe[dataframe['fold'] != fold].reset_index(drop=True)
     valid_folds = dataframe[dataframe['fold'] == fold].reset_index(drop=True)
     valid_texts = valid_folds['pn_history'].values
