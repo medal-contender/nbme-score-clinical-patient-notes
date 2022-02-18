@@ -12,7 +12,7 @@
 ```
 - Jeongwon Kim (kimkim031@naver.com)
 - Jaewoo Park (jerife@naver.com)
-- Youngmin Paik (ympaik@hotmail.com)
+- Young Min Paik (ympaik@hotmail.com)
 - Hyeonhoon Lee (jackli0373@gmail.com)
 ```
 
