@@ -116,4 +116,4 @@ def prepare_loaders(dataframe, CFG, fold):
         drop_last=False
     )
 
-    return train_loader, valid_loader, valid_texts, valid_labels, len(valid_folds), len(train_folds)
+    return train_loader, valid_loader, valid_texts, valid_labels, len(valid_folds), len(train_folds), valid_folds

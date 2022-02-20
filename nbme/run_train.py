@@ -4,6 +4,7 @@ import warnings
 import wandb
 import time
 import argparse
+import pandas as pd
 import torch
 import torch.nn as nn
 from transformers import AutoTokenizer, AdamW
@@ -45,7 +46,8 @@ def run_training(
     valid_labels,
     valid_fold_len,
     run,
-    CFG
+    CFG,
+    val_folds
 ):
 
     # 자동으로 Gradients를 로깅
@@ -71,7 +73,7 @@ def run_training(
         # eval
         avg_val_loss, predictions = valid_fn(
             CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
-        
+
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -108,10 +110,15 @@ def run_training(
             run.summary["Best Loss"] = best_score
             PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_score:.4f}.pth"
             # 모델 저장
-            torch.save(model.state_dict(), PATH)
+            torch.save({'model': model.state_dict(),
+                        'predictions': predictions}, PATH)
             print(f"{red_font} Best Score {best_score} Model Saved{reset_all}")
 
         print()
+
+    predictions = torch.load(PATH,
+                             map_location=torch.device('cpu'))['predictions']
+    val_folds[[i for i in range(CFG.max_len)]] = predictions
 
     end = time.time()
     time_elapsed = end - start
@@ -119,7 +126,7 @@ def run_training(
         time_elapsed // 3600, (time_elapsed % 3600) // 60, (time_elapsed % 3600) % 60))
     print("Best Loss: {:.4f}".format(best_score))
 
-    return history
+    return history, val_folds
 
 
 def get_result(oof_df, CFG):
@@ -155,7 +162,7 @@ def main(CFG):
 
     # 데이터프레임
     train_df, features, patient_notes = get_train()
-
+    
     # 데이터 전처리
     train_df = preprocessing_incorrect(train_df)
 
@@ -165,10 +172,15 @@ def main(CFG):
         CFG.train_param.n_fold,
     )
 
+    # Check error
+    if CFG.train_param.debug:
+        train_df = train_df.sample(n=1000).reset_index(drop=True)
+
     CFG.max_len = get_maxlen(features, patient_notes, CFG)
     # train_df.to_csv('../input/train_df.csv')
 
     # 학습 진행
+    oof_df_ = pd.DataFrame()
     for fold in range(0, CFG.train_param.n_fold):
 
         print(f"{yellow_font}====== Fold: {fold} ======{reset_all}")
@@ -185,7 +197,7 @@ def main(CFG):
             anonymous='must'
         )
 
-        train_loader, valid_loader, valid_texts, valid_labels, valid_fold_len, train_fold_len = \
+        train_loader, valid_loader, valid_texts, valid_labels, valid_fold_len, train_fold_len, val_folds = \
             prepare_loaders(train_df, CFG, fold)
 
         model = NBMEModel(CFG, config_path=None, pretrained=True)
@@ -213,7 +225,7 @@ def main(CFG):
             train_fold_len / CFG.train_param.batch_size * CFG.train_param.epochs)
         scheduler = fetch_scheduler(optimizer, CFG, num_train_steps=num_train_steps)
 
-        history = run_training(
+        history, oof_df = run_training(
             model,
             optimizer,
             scheduler,
@@ -226,9 +238,12 @@ def main(CFG):
             valid_fold_len,
             run,
             CFG,
+            val_folds,
         )
 
         run.finish()
+
+        oof_df_ = pd.concat([oof_df, oof_df_])
 
         if fold == CFG.train_param.n_fold-1:
             config_path = f"{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_config.pth"
@@ -238,6 +253,9 @@ def main(CFG):
         _ = gc.collect()
         print()
 
+    # Prediction for oof save
+    oof_df_ = oof_df_.reset_index(drop=True)
+    oof_df_.to_pickle(root_save_dir +'/deberta/oof_df.pkl')
 
 if __name__ == '__main__':
 
