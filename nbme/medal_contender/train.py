@@ -79,7 +79,7 @@ def train_fn(CFG, fold, train_loader, model, criterion, optimizer, epoch, schedu
         tbar.set_postfix(
             Epoch=epoch,
             Train_Loss=epoch_loss,
-            Grad_Norm=grad_norm,
+            Grad_Norm=grad_norm.item(),
             LR=optimizer.param_groups[0]['lr']
         )
     return losses.avg

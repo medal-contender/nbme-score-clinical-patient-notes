@@ -34,7 +34,12 @@ git clone https://huggingface.co/studio-ousia/luke-base
 cd ./luke-base
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
-# DeBERTa
+# DeBERTa base
+git clone https://huggingface.co/microsoft/deberta-base
+cd ./deberta-base
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
+# DeBERTa v3
 git clone https://huggingface.co/microsoft/deberta-v3-base
 cd ./deberta-v3-base
 GIT_LFS_SKIP_SMUDGE=1

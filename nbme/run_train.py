@@ -162,7 +162,7 @@ def main(CFG):
 
     # 데이터프레임
     train_df, features, patient_notes = get_train()
-
+    
     # 데이터 전처리
     train_df = preprocessing_incorrect(train_df)
 
@@ -171,6 +171,10 @@ def main(CFG):
         train_df,
         CFG.train_param.n_fold,
     )
+
+    # Check error
+    if CFG.train_param.debug:
+        train_df = train_df.sample(n=1000).reset_index(drop=True)
 
     CFG.max_len = get_maxlen(features, patient_notes, CFG)
     # train_df.to_csv('../input/train_df.csv')

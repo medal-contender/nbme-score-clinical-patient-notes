@@ -1,9 +1,9 @@
 # NBME - Score Clinical Patient Notes
+
 ---
 <p align="center">
   <img src="./images/nbme.png" width=550>
 </p>
-
 
 ---
 
@@ -12,7 +12,7 @@
 ```
 - Jeongwon Kim (kimkim031@naver.com)
 - Jaewoo Park (jerife@naver.com)
-- Youngmin Paik (ympaik@hotmail.com)
+- Young Min Paik (ympaik@hotmail.com)
 - Hyeonhoon Lee (jackli0373@gmail.com)
 ```
 
@@ -25,6 +25,7 @@ In this competition, you’ll identify specific clinical concepts in patient not
 If successful, you'll help tackle the biggest practical barriers in patient note scoring, making the approach more transparent, interpretable, and easing the development and administration of such assessments. As a result, medical practitioners will be able to explore the full potential of patient notes to reveal information relevant to clinical skills assessment.
 
 ### Due Date
+
 - Team Merge Deadline - April 26, 2022
 - Submission Deadline - May 3, 2022
 
@@ -33,11 +34,13 @@ If successful, you'll help tackle the biggest practical barriers in patient note
 ## Program
 
 - Fetch Pretrained Models
+
 ```shell
 $ sh ./download_pretrained_models.sh
 ```
 
 - Train
+
 ```shell
 $ cd /nbme-score-clinical-patient-notes/nbme
 $ python3 run_train.py \
@@ -46,25 +49,43 @@ $ python3 run_train.py \
           "--training-keyword", "deberta-test"
 ```
 
+You can set `launch.json` for vscode as follow:
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "run_train.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/nbme",
+            "args": ["--config-file", "../configs/deberta.yaml", "--train"]
+        }
+    ]
+}
+```
+
 ## Requirements
 
 ### Environment
 
-* Python 3.7 (To match with Kaggle environment)
-* Conda
-* git
-* git-lfs
-* CUDA 11.3 + PyTorch 1.10.1
+- Python 3.7 (To match with Kaggle environment)
+- Conda
+- git
+- git-lfs
+- CUDA 11.3 + PyTorch 1.10.1
 
 Pytorch version may vary depanding on your hardware configurations.
-
 
 ### Installation with virtual environment (Windows)
 
 ```bash
 git clone https://github.com/medal-contender/nbme-score-clinical-patient-notes.git
 conda create -n nbme python=3.7
-activate nbme
+conda activate nbme
 # PyTorch installation process may vary depending on your hardware
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 cd nbme-score-clinical-patient-notes
@@ -72,6 +93,7 @@ pip install -r requirements.txt
 ```
 
 Run this in WSL (or WSL2)
+
 ```bash
 ./download_pretrained_models.sh
 ```
