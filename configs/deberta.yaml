@@ -1,5 +1,5 @@
 program_param:
-  wandb_key: b41fa9bf3a38422dafc16e253d84694489607e9f
+  wandb_key: 
   project_name: nbme
   seed: 42
 
@@ -19,6 +19,7 @@ model_param:
   is_deeper_attn: True
 
 train_param:
+  debug: True
   epochs: 1
   lr: 2e-5
   max_lr: 0.1
@@ -56,4 +57,4 @@ infer_param:
   shuffle: False
   pin_memory: True
   checkpoint_path: checkpoint/deberta/deberta.bin
-  save_dir: /jigsaw/output/deberta
+  save_dir: output/deberta
