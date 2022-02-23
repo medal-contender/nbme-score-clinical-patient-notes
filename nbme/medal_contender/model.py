@@ -5,6 +5,13 @@ from transformers import AutoModel, AutoConfig
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 from medal_contender.configs import SCHEDULER_LIST, BERT_MODEL_LIST
 
+# 새로운 파라미터 초기화 방식
+def init_params(module_lst):
+    for module in module_lst:
+        for param in module.parameters():
+            if param.dim() > 1:
+                torch.nn.init.xavier_uniform_(param)
+    return
 
 class NBMEModel(nn.Module):
     def __init__(self, cfg, config_path=None, pretrained=False):
@@ -23,21 +30,31 @@ class NBMEModel(nn.Module):
         else:
             self.model = AutoModel(self.config)
         self.fc_dropout = nn.Dropout(cfg.train_param.fc_dropout)
-        self.fc = nn.Linear(self.config.hidden_size, 1)
-        self._init_weights(self.fc)
+        # self.fc = nn.Linear(self.config.hidden_size, 1)
+        self.fc = nn.Sequential(
+            nn.Linear(self.config.hidden_size, 256),
+            nn.LayerNorm(256),
+            nn.Dropout(0.2),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+        )
+        init_params([self.fc])
 
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+    # 기존 가중치 초기화 방식
+    #     self._init_weights(self.fc)
+
+    # def _init_weights(self, module):
+    #     if isinstance(module, nn.Linear):
+    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+    #         if module.bias is not None:
+    #             module.bias.data.zero_()
+    #     elif isinstance(module, nn.Embedding):
+    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+    #         if module.padding_idx is not None:
+    #             module.weight.data[module.padding_idx].zero_()
+    #     elif isinstance(module, nn.LayerNorm):
+    #         module.bias.data.zero_()
+    #         module.weight.data.fill_(1.0)
 
     def feature(self, inputs):
         outputs = self.model(**inputs)
@@ -46,7 +63,7 @@ class NBMEModel(nn.Module):
 
     def forward(self, inputs):
         feature = self.feature(inputs)
-        output = self.fc(self.fc_dropout(feature))
+        output = self.fc(feature)
         return output
 
 
