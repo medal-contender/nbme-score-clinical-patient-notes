@@ -162,7 +162,7 @@ def main(CFG):
 
     # 데이터프레임
     train_df, features, patient_notes = get_train()
-    
+
     # 데이터 전처리
     train_df = preprocessing_incorrect(train_df)
 
@@ -255,7 +255,9 @@ def main(CFG):
 
     # Prediction for oof save
     oof_df_ = oof_df_.reset_index(drop=True)
-    oof_df_.to_pickle(f'{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_oof_df.pkl')
+    oof_df_.to_pickle(
+        f'{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_oof_df.pkl')
+
 
 if __name__ == '__main__':
 
