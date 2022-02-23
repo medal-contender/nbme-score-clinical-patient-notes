@@ -5,7 +5,6 @@ from transformers import AutoModel, AutoConfig
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 from medal_contender.configs import SCHEDULER_LIST, BERT_MODEL_LIST
 
-
 def init_params(module_lst):
     for module in module_lst:
         for param in module.parameters():
