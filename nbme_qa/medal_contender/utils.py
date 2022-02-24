@@ -10,112 +10,7 @@ import pandas as pd
 from glob import glob
 from tqdm.auto import tqdm
 from sklearn.metrics import f1_score
-from sklearn.model_selection import GroupKFold
-
-# For Group K-Fold Strategy
-
-
-class UnionFind():
-    def __init__(self, n):
-        self.n = n
-        self.parents = [-1] * n
-
-    def find(self, x):
-        if self.parents[x] < 0:
-            return x
-        else:
-            self.parents[x] = self.find(self.parents[x])
-            return self.parents[x]
-
-    def union(self, x, y):
-        x = self.find(x)
-        y = self.find(y)
-        if x == y:
-            return
-        if self.parents[x] > self.parents[y]:
-            x, y = y, x
-        self.parents[x] += self.parents[y]
-        self.parents[y] = x
-
-
-def micro_f1(preds, truths):
-    """
-    Micro f1 on binary arrays.
-
-    Args:
-        preds (list of lists of ints): Predictions.
-        truths (list of lists of ints): Ground truths.
-
-    Returns:
-        float: f1 score.
-    """
-    # Micro : aggregating over all instances
-    preds = np.concatenate(preds)
-    truths = np.concatenate(truths)
-    return f1_score(truths, preds)
-
-
-def spans_to_binary(spans, length=None):
-    """
-    Converts spans to a binary array indicating whether each character is in the span.
-
-    Args:
-        spans (list of lists of two ints): Spans.
-
-    Returns:
-        np array [length]: Binarized spans.
-    """
-    length = np.max(spans) if length is None else length
-    binary = np.zeros(length)
-    for start, end in spans:
-        binary[start:end] = 1
-    return binary
-
-
-def span_micro_f1(preds, truths):
-    """
-    Micro f1 on spans.
-
-    Args:
-        preds (list of lists of two ints): Prediction spans.
-        truths (list of lists of two ints): Ground truth spans.
-
-    Returns:
-        float: f1 score.
-    """
-    bin_preds = []
-    bin_truths = []
-    for pred, truth in zip(preds, truths):
-        if not len(pred) and not len(truth):
-            continue
-        length = max(np.max(pred) if len(pred) else 0,
-                     np.max(truth) if len(truth) else 0)
-        bin_preds.append(spans_to_binary(pred, length))
-        bin_truths.append(spans_to_binary(truth, length))
-    return micro_f1(bin_preds, bin_truths)
-
-
-def create_labels_for_scoring(df):
-    # example: ['0 1', '3 4'] -> ['0 1; 3 4']
-    df['location_for_create_labels'] = [ast.literal_eval(f'[]')] * len(df)
-    for i in range(len(df)):
-        lst = df.loc[i, 'location']
-        if lst:
-            new_lst = ';'.join(lst)
-            df.loc[i, 'location_for_create_labels'] = ast.literal_eval(
-                f'[["{new_lst}"]]')
-    # create labels
-    truths = []
-    for location_list in df['location_for_create_labels'].values:
-        truth = []
-        if len(location_list) > 0:
-            location = location_list[0]
-            for loc in [s.split() for s in location.split(';')]:
-                start, end = int(loc[0]), int(loc[1])
-                truth.append([start, end])
-        truths.append(truth)
-    return truths
-
+from sklearn.model_selection import GroupKFold, StratifiedKFold
 
 def set_seed(seed=42):
     random.seed(seed)
@@ -148,16 +43,15 @@ def get_train(csv_path='../input/nbme-score-clinical-patient-notes/train.csv'):
 
     return train, features, patient_notes
 
+def get_folded_dataframe(merged, n_splits):
+    skf = StratifiedKFold(n_splits=n_splits)
+    merged["stratify_on"] = merged["case_num"].astype(str) + merged["feature_num"].astype(str)
+    merged["fold"] = -1
 
-def get_folded_dataframe(df, n_splits):
-    fold = GroupKFold(n_splits=n_splits)
-    groups = df['pn_num'].values
-    for num, (train_index, val_index) in enumerate(fold.split(df, df['location'], groups)):
-        df.loc[val_index, 'fold'] = int(num)
-    df['fold'] = df['fold'].astype(int)
-    # print(df.groupby('fold').size())
-    return df
-
+    for fold, (_, valid_idx) in enumerate(skf.split(merged["id"], y=merged["stratify_on"])):
+        merged.loc[valid_idx, "fold"] = fold
+    
+    return merged
 
 def get_best_model(save_dir):
     model_list = glob(save_dir + '/*.bin')
@@ -171,11 +65,6 @@ def get_best_model(save_dir):
             best_model = model
 
     return best_model
-
-
-def get_score(y_true, y_pred):
-    score = span_micro_f1(y_true, y_pred)
-    return score
 
 def get_maxlen(features, patient_notes, cfg):
     result = 0
@@ -217,3 +106,4 @@ class ConfigManager(object):
             data = yaml.full_load(f)
 
         return data
+

@@ -1,7 +1,6 @@
 # Config 설정
 BERT_MODEL_LIST = {
-    "deberta": "microsoft/deberta-base",
-
+    "roberta": "roberta-base",
 }
 
 SCHEDULER_LIST = {
