@@ -33,16 +33,17 @@ os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 def run_training(
     dataframe,
     CFG,
+    save_dir,
 ):
 
     for fold in range(CFG.train_param.n_fold):
-        train_fn(dataframe, CFG, fold)
+        train_fn(dataframe, CFG, fold, save_dir)
 
     return
 
 def main(CFG):
     CFG.tokenizer = AutoTokenizer.from_pretrained(
-        BERT_MODEL_LIST[CFG.model_param.model_name]
+        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}"
     )
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 
@@ -79,6 +80,7 @@ def main(CFG):
     run_training(
         train_df,
         CFG,
+        save_dir,
     )
 
 if __name__ == '__main__':
