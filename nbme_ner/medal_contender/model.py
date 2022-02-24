@@ -56,7 +56,7 @@ class NBMEModel(nn.Module):
 
     def forward(self, inputs):
         feature = self.feature(inputs)
-        output = self.fc(feature)
+        output = self.classifier(feature)
         return output
 
 
