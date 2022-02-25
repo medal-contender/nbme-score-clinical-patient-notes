@@ -131,7 +131,9 @@ def fetch_scheduler(optimizer, cfg, num_train_steps=None):
     elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'ReduceLROnPlateau':
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode='min', min_lr=cfg.train_param.min_lr
+            mode='min',
+            patience=2,
+            min_lr=float(cfg.train_param.min_lr)
         )
     elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CyclicLR':
         scheduler = lr_scheduler.CyclicLR(

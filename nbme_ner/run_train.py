@@ -77,7 +77,7 @@ def run_training(
 
         # eval
         avg_val_loss, predictions = valid_fn(
-            CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
+            CFG, valid_loader, model, criterion, epoch, scheduler, CFG.model_param.device)
 
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
