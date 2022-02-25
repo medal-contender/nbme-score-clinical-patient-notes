@@ -27,7 +27,7 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def train_fn(dataframe, CFG, fold):
+def train_fn(dataframe, CFG, fold, save_dir):
     
     # get dataloader
     train = dataframe[dataframe["fold"] != fold].reset_index(drop=True)
@@ -51,6 +51,8 @@ def train_fn(dataframe, CFG, fold):
     history = {"train": [], "valid": []}
     best_loss = np.inf
     
+    torch.cuda.empty_cache()
+
     # training
     for epoch in range(CFG.train_param.epochs):
         model.train()
@@ -93,10 +95,10 @@ def train_fn(dataframe, CFG, fold):
         # save model
         if valid_loss.avg < best_loss:
             best_loss = valid_loss.avg
-            torch.save(model.state_dict(), f"nbme_{fold}.pth")
+            torch.save(model.state_dict(), f"{save_dir}/nbme_{fold}.pth")
         
     # evaluation summary
-    model.load_state_dict(torch.load(f"nbme_{fold}.pth", map_location = CFG.model_param.device))
+    model.load_state_dict(torch.load( f"{save_dir}/nbme_{fold}.pth", map_location = CFG.model_param.device))
     model.eval()
     preds = []
     offsets = []
