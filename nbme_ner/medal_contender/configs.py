@@ -1,7 +1,12 @@
 # Config 설정
 BERT_MODEL_LIST = {
-    "deberta": "microsoft/deberta-base",
+    "deberta": "microsoft/deberta-v3-large",
 
+}
+
+MAKE_TOKENIZER= {
+    "transformers": "/home/ubuntu/anaconda3/envs/nbme/lib/python3.7/site-packages/transformers",
+    "dir": "./medal_contender/deberta-v2-3-fast-tokenizer"
 }
 
 SCHEDULER_LIST = {
