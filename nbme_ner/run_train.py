@@ -145,8 +145,11 @@ def get_result(oof_df, CFG):
 
 
 def main(CFG):
-   
+    root_save_dir = '../checkpoint'
     CFG.tokenizer = DebertaV2TokenizerFast.from_pretrained(BERT_MODEL_LIST[CFG.model_param.model_name])
+    
+    #tokenizer 저장
+    CFG.tokenizer.save_pretrained(os.path.join(root_save_dir, 'get_token'))
     
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 
@@ -157,7 +160,6 @@ def main(CFG):
     HASH_NAME = id_generator(size=12)
 
     # 모델 저장 경로
-    root_save_dir = '../checkpoint'
     save_dir = os.path.join(root_save_dir, CFG.model_param.model_name)
     os.makedirs(save_dir, exist_ok=True)
 
