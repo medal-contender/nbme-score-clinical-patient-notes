@@ -1,0 +1,59 @@
+program_param:
+  wandb_key: 
+  project_name: nbme
+  seed: 42
+
+data_param:
+  dir_name: nbme-score-clinical-patient-notes
+
+model_param:
+  model_name: roberta
+  scheduler: cosine
+  mix_precision: True
+  num_classes: 1
+  num_cycles: 0.5
+  device: cuda
+  drop_p: 0.2
+  num_warmup_steps: 0
+  is_extra_attn: True
+  is_deeper_attn: True
+
+train_param:
+  epochs: 5
+  lr: 1e-5
+  max_lr: 0.1
+  min_lr: 1e-6
+  encoder_lr: 2e-5
+  decoder_lr: 2e-5
+  eps: 1e-6
+  betas: (0.9, 0.999)
+  batch_size: 4
+  fc_dropout: 0.2
+  max_len:
+  weight_decay: 0.01
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1000
+  num_workers: 0
+  n_fold: 5
+  trn_fold: [0, 1, 2, 3, 4]
+  save_dir: checkpoint/roberta
+  loss: BCEWithLogitsLoss
+  T_max: 500
+  T_0: 50
+  reduce_ratio: 0.95
+  apex: True
+  batch_scheduler: True
+
+valid_param:
+  batch_size: 64
+  num_workers: 6
+  shuffle: False
+  pin_memory: True
+
+infer_param:
+  batch_size: 64
+  num_workers: 6
+  shuffle: False
+  pin_memory: True
+  checkpoint_path: checkpoint/roberta/roberta.bin
+  save_dir: /jigsaw/output/roberta
