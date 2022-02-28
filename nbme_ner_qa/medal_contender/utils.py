@@ -1,18 +1,17 @@
 import ast
-import random
-import torch
-import string
-import munch
-import yaml
 import os
-import numpy as np
-import pandas as pd
+import random
+import string
 from glob import glob
-from tqdm.auto import tqdm
-from sklearn.metrics import f1_score
-from sklearn.model_selection import GroupKFold
+from itertools import chain
 
-# For Group K-Fold Strategy
+import munch
+import numpy as np
+import torch
+import yaml
+from sklearn.metrics import f1_score, precision_recall_fscore_support
+from sklearn.model_selection import GroupKFold
+from tqdm.auto import tqdm
 
 
 class UnionFind():
@@ -133,22 +132,6 @@ def id_generator(size=12, chars=string.ascii_lowercase + string.digits):
     return ''.join(random.SystemRandom().choice(chars) for _ in range(size))
 
 
-def get_train(csv_path='../input/nbme-score-clinical-patient-notes/train.csv'):
-    train = pd.read_csv(csv_path)
-    train['annotation'] = train['annotation'].apply(ast.literal_eval)
-    train['location'] = train['location'].apply(ast.literal_eval)
-    features = pd.read_csv(
-        '../input/nbme-score-clinical-patient-notes/features.csv')
-    features.loc[27, 'feature_text'] = "Last-Pap-smear-1-year-ago"
-    patient_notes = pd.read_csv(
-        '../input/nbme-score-clinical-patient-notes/patient_notes.csv')
-
-    train = train.merge(features, on=['feature_num', 'case_num'], how='left')
-    train = train.merge(patient_notes, on=['pn_num', 'case_num'], how='left')
-
-    return train, features, patient_notes
-
-
 def get_folded_dataframe(df, n_splits):
     fold = GroupKFold(n_splits=n_splits)
     groups = df['pn_num'].values
@@ -177,6 +160,7 @@ def get_score(y_true, y_pred):
     score = span_micro_f1(y_true, y_pred)
     return score
 
+
 def get_maxlen(features, patient_notes, cfg):
     result = 0
     for text_col in ['feature_text']:
@@ -202,6 +186,7 @@ def get_maxlen(features, patient_notes, cfg):
     # cls & sep & sep
     return result + 3
 
+
 class ConfigManager(object):
     def __init__(self, args):
 
@@ -217,3 +202,114 @@ class ConfigManager(object):
             data = yaml.full_load(f)
 
         return data
+
+
+def sigmoid(z):
+    return 1/(1 + np.exp(-z))
+
+
+def compute_metrics(eval_prediction):
+    """
+    This only gets the scores at the token level.
+    The actual leaderboard score is based at the character level.
+    The CV score at the character level is handled in the evaluate
+    function of the trainer.
+    """
+    predictions, y_true = eval_prediction
+    predictions = sigmoid(predictions)
+    y_true = y_true.astype(int)
+
+    y_pred = [
+        [int(p > 0.5) for (p, l) in zip(pred, label) if l != -100]
+        for pred, label in zip(predictions, y_true)
+    ]
+
+    # Remove ignored index (special tokens)
+    y_true = [
+        [l for l in label if l != -100]
+        for label in y_true
+    ]
+
+    results = precision_recall_fscore_support(
+        list(chain(*y_true)), list(chain(*y_pred)), average="binary")
+    return {
+        "token_precision": results[0],
+        "token_recall": results[1],
+        "token_f1": results[2]
+    }
+
+
+def get_location_predictions(dataset, preds):
+    """
+    It's easier to run CV if we don't convert predictions into
+    the format expected at test time.
+    """
+    all_predictions = []
+    for pred, offsets, seq_ids in zip(preds, dataset["offset_mapping"], dataset["sequence_ids"]):
+        pred = sigmoid(pred)
+        start_idx = None
+        current_preds = []
+        for p, o, s_id in zip(pred, offsets, seq_ids):
+            if s_id is None or s_id == 0:
+                continue
+
+            if p > 0.5:
+                if start_idx is None:
+                    start_idx = o[0]
+                end_idx = o[1]
+            elif start_idx is not None:
+                current_preds.append((start_idx, end_idx))
+                start_idx = None
+
+        if start_idx is not None:
+            current_preds.append((start_idx, end_idx))
+
+        all_predictions.append(current_preds)
+
+    return all_predictions
+
+
+def calculate_char_CV(dataset, predictions):
+    """
+    Some tokenizers include the leading space as the start of the
+    offset_mapping, so there is code to ignore that space.
+    """
+    all_labels = []
+    all_preds = []
+    for preds, offsets, seq_ids, labels, text in zip(
+        predictions,
+        dataset["offset_mapping"],
+        dataset["sequence_ids"],
+        dataset["labels"],
+        dataset["text"]
+    ):
+
+        num_chars = max(list(chain(*offsets)))
+        char_labels = np.zeros((num_chars))
+
+        for o, s_id, label in zip(offsets, seq_ids, labels):
+            if s_id is None or s_id == 0:  # ignore question part of input
+                continue
+            if int(label) == 1:
+
+                char_labels[o[0]:o[1]] = 1
+                if text[o[0]].isspace() and o[0] > 0 and char_labels[o[0]-1] != 1:
+                    char_labels[o[0]] = 0
+
+        char_preds = np.zeros((num_chars))
+
+        for start_idx, end_idx in preds:
+            char_preds[start_idx:end_idx] = 1
+            if text[start_idx].isspace():
+                char_preds[start_idx] = 0
+
+        all_labels.extend(char_labels)
+        all_preds.extend(char_preds)
+
+    results = precision_recall_fscore_support(
+        all_labels, all_preds, average="binary")
+    return {
+        "precision": results[0],
+        "recall": results[1],
+        "f1": results[2]
+    }

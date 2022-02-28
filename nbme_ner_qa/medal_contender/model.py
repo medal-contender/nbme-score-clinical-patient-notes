@@ -1,163 +1,113 @@
 import torch
-import torch.nn as nn
-from torch.optim import lr_scheduler
-from transformers import AutoModel, AutoConfig
-from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
-from medal_contender.configs import SCHEDULER_LIST, BERT_MODEL_LIST
-
-# 새로운 파라미터 초기화 방식
-def init_params(module_lst):
-    for module in module_lst:
-        for param in module.parameters():
-            if param.dim() > 1:
-                torch.nn.init.xavier_uniform_(param)
-    return
-
-class NBMEModel(nn.Module):
-    def __init__(self, cfg, config_path=None, pretrained=False):
-        super().__init__()
-        self.cfg = cfg
-        model_name = BERT_MODEL_LIST[self.cfg.model_param.model_name]
-
-        if config_path is None:
-            self.config = AutoConfig.from_pretrained(
-                model_name, output_hidden_states=True)
-        else:
-            self.config = torch.load(config_path)
-        if pretrained:
-            self.model = AutoModel.from_pretrained(
-                model_name, config=self.config)
-        else:
-            self.model = AutoModel(self.config)
-        self.fc_dropout = nn.Dropout(cfg.train_param.fc_dropout)
-        # self.fc = nn.Linear(self.config.hidden_size, 1)
-        self.fc = nn.Sequential(
-            nn.Linear(self.config.hidden_size, 256),
-            nn.LayerNorm(256),
-            nn.Dropout(0.2),
-            nn.ReLU(),
-            nn.Linear(256, 1),
-        )
-        init_params([self.fc])
-
-    # 기존 가중치 초기화 방식
-    #     self._init_weights(self.fc)
-
-    # def _init_weights(self, module):
-    #     if isinstance(module, nn.Linear):
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.bias is not None:
-    #             module.bias.data.zero_()
-    #     elif isinstance(module, nn.Embedding):
-    #         module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-    #         if module.padding_idx is not None:
-    #             module.weight.data[module.padding_idx].zero_()
-    #     elif isinstance(module, nn.LayerNorm):
-    #         module.bias.data.zero_()
-    #         module.weight.data.fill_(1.0)
-
-    def feature(self, inputs):
-        outputs = self.model(**inputs)
-        last_hidden_states = outputs[0]
-        return last_hidden_states
-
-    def forward(self, inputs):
-        feature = self.feature(inputs)
-        output = self.fc(feature)
-        return output
+from transformers.modeling_outputs import TokenClassifierOutput
 
 
-def get_optimizer_params(model, encoder_lr, decoder_lr, weight_decay=0.0):
-    param_optimizer = list(model.named_parameters())
-    no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
-    optimizer_parameters = [
-        {'params': [p for n, p in model.model.named_parameters() if not any(nd in n for nd in no_decay)],
-         'lr': encoder_lr, 'weight_decay': weight_decay},
-        {'params': [p for n, p in model.model.named_parameters() if any(nd in n for nd in no_decay)],
-         'lr': encoder_lr, 'weight_decay': 0.0},
-        {'params': [p for n, p in model.named_parameters() if "model" not in n],
-         'lr': decoder_lr, 'weight_decay': 0.0}
-    ]
-    return optimizer_parameters
+def __init__(self, config):
+    super(self.PreTrainedModel, self).__init__(config)
+
+    kwargs = {
+        "add_pooling_layer": False
+    }
+    if config.model_type not in {"bert", "roberta"}:
+        kwargs = {}
+    setattr(self, self.backbone_name, self.ModelClass(config, **kwargs))
+
+    classifier_dropout_name = None
+    for key in dir(config):
+        if ("classifier" in key or "hidden" in key) and "dropout" in key:
+            if getattr(config, key) is not None:
+                classifier_dropout_name = key
+                break
+
+    if classifier_dropout_name is None:
+        raise ValueError("Cannot infer dropout name in config")
+    classifier_dropout = getattr(config, classifier_dropout_name)
+    self.dropout = torch.nn.Dropout(classifier_dropout)
+    self.classifier = torch.nn.Linear(config.hidden_size, 1)
 
 
+def forward(
+    self,
+    input_ids=None,
+    attention_mask=None,
+    token_type_ids=None,
+    position_ids=None,
+    head_mask=None,
+    inputs_embeds=None,
+    labels=None,
+    output_attentions=None,
+    output_hidden_states=None,
+    return_dict=None,
+):
+    return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+    # Funky alert
+    outputs = getattr(self, self.backbone_name)(
+        input_ids,
+        attention_mask=attention_mask,
+        token_type_ids=token_type_ids,
+        position_ids=position_ids,
+        # head_mask=head_mask, # these aren't necessary and some models error if you include
+        # inputs_embeds=inputs_embeds,  # these aren't necessary and some models error if you include
+        output_attentions=output_attentions,
+        output_hidden_states=output_hidden_states,
+        return_dict=return_dict,
+    )
+
+    sequence_output = outputs[0]
+
+    sequence_output = self.dropout(sequence_output)
+    logits = self.classifier(sequence_output)
+
+    loss = None
+    if labels is not None:
+        loss_fct = torch.nn.BCEWithLogitsLoss(reduction="none")
+        loss = loss_fct(logits.view(-1, 1), labels.view(-1, 1))
+
+        # this ignores the part of the sequence that got -100 as labels
+        loss = torch.masked_select(loss, labels.view(-1, 1) > -1).mean()
+
+    return TokenClassifierOutput(
+        loss=loss,
+        logits=logits,
+        hidden_states=outputs.hidden_states,
+        attentions=outputs.attentions,
+    )
 
 
-def fetch_scheduler(optimizer, cfg, num_train_steps=None):
-    '''
-        Config에 맞는 Solver Scheduler를 반환합니다.
-    '''
-    if cfg.model_param.scheduler=='linear':
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=int(cfg.model_param.num_warmup_steps),
-            num_training_steps=num_train_steps
-        )
-    elif cfg.model_param.scheduler=='cosine':
-        scheduler = get_cosine_schedule_with_warmup(
-            optimizer, num_warmup_steps=int(cfg.model_param.num_warmup_steps),
-            num_training_steps=num_train_steps,
-            num_cycles=float(cfg.model_param.num_cycles)
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CosineAnnealingLR':
-        scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer,
-            T_max=cfg.train_param.T_max,
-            eta_min=float(cfg.train_param.min_lr)
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CosineAnnealingWarmRestarts':
-        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer,
-            T_0=cfg.train_param.T_0,
-            eta_min=float(cfg.train_param.min_lr)
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'LambdaLR':
-        scheduler = lr_scheduler.LambdaLR(
-            optimizer,
-            lr_lambda=lambda epoch: cfg.train_param.reduce_ratio ** epoch
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'MultiplicativeLR':
-        scheduler = lr_scheduler.MultiplicativeLR(
-            optimizer,
-            lr_lambda=lambda epoch: cfg.train_param.reduce_ratio ** epoch
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'StepLR':
-        scheduler = lr_scheduler.StepLR(
-            optimizer,
-            step_size=cfg.train_param.step_size, gamma=cfg.train_param.gamma
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'MultiStepLR':
-        scheduler = lr_scheduler.MultiStepLR(
-            optimizer,
-            milestones=cfg.train_param.milestones, gamma=cfg.train_param.gamma
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'ExponentialLR':
-        scheduler = lr_scheduler.ExponentialLR(
-            optimizer,
-            gamma=cfg.train_param.gamma
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'ReduceLROnPlateau':
-        scheduler = lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode='min', min_lr=cfg.train_param.min_lr
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CyclicLR':
-        scheduler = lr_scheduler.CyclicLR(
-            optimizer,
-            base_lr=float(cfg.train_param.base_lr),
-            step_size_up=cfg.train_param.step_size_up,
-            max_lr=float(cfg.train_param.lr),
-            gamma=cfg.train_param.gamma,
-            mode='exp_range'
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'OneCycleLR':
-        scheduler = lr_scheduler.OneCycleLR(
-            optimizer,
-            max_lr=cfg.train_param.max_lr,
-            steps_per_epoch=cfg.train_param.steps_per_epoch,
-            epochs=cfg.train_param.epochs,
-            anneal_strategy='linear'
-        )
-    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'None':
-        return None
+@classmethod
+def from_pretrained(cls, *args, **kwargs):
+    cls.PreTrainedModel = kwargs.pop("PreTrainedModel")
+    cls.ModelClass = kwargs.pop("ModelClass")
+    cls.backbone_name = kwargs["config"].model_type
 
-    return scheduler
+    # changes deberta-v2 --> deberta
+    if "deberta" in cls.backbone_name:
+        cls.backbone_name = "deberta"
+
+    return super(cls.PreTrainedModel, cls).from_pretrained(*args, **kwargs)
+
+
+def get_model(model_name_or_path, config):
+    model_type = type(config).__name__[:-len("config")]
+    name = f"{model_type}PreTrainedModel"
+    PreTrainedModel = getattr(__import__("transformers", fromlist=[name]),
+                              name)
+    name = f"{model_type}Model"
+    ModelClass = getattr(__import__("transformers", fromlist=[name]), name)
+
+    model = type('HybridModel', (PreTrainedModel,), {
+        '__init__': __init__,
+        "forward": forward,
+        "from_pretrained": from_pretrained
+    })
+
+    model._keys_to_ignore_on_load_unexpected = [r"pooler"]
+    model._keys_to_ignore_on_load_missing = [r"position_ids"]
+
+    return model.from_pretrained(
+        pretrained_model_name_or_path=model_name_or_path,
+        PreTrainedModel=PreTrainedModel,
+        ModelClass=ModelClass,
+        config=config
+    )
