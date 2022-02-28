@@ -112,12 +112,6 @@ def main(CFG):
             f"{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.train_param.lr_scheduler_type}_FOLD_{fold}"
         trainer.save_model(save_path)
         run.finish()
-
-        if fold == CFG.model_param.n_fold-1:
-            config_path = \
-                f"{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.train_param.lr_scheduler_type}_config.pth"
-            torch.save(model.config, config_path)
-
         print()
 
 
