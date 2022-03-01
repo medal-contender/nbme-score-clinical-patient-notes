@@ -34,6 +34,7 @@ train_param:
   gradient_accumulation_steps: 4
   max_grad_norm: 1000
   num_workers: 0
+  kfold_type : skf # skf : stratifiedkfold / group : groupkfold
   n_fold: 5
   trn_fold: [0, 1, 2, 3, 4]
   save_dir: checkpoint/electra
