@@ -13,18 +13,14 @@ from medal_contender.utils import (
     id_generator, set_seed, get_train, get_folded_dataframe, ConfigManager,
     get_score, create_labels_for_scoring, get_maxlen
 )
-from medal_contender.tokenizer import load_tokenizer
 from medal_contender.preprocessing import preprocessing_incorrect
-from medal_contender.configs import BERT_MODEL_LIST, MAKE_TOKENIZER
+from medal_contender.configs import BERT_MODEL_LIST
 from medal_contender.dataset import prepare_loaders
 from medal_contender.model import NBMEModel, fetch_scheduler, get_optimizer_params
 from medal_contender.train import (
     train_fn, valid_fn, get_predictions, get_char_probs, get_results
 )
 from colorama import Fore, Style
-
-load_tokenizer(MAKE_TOKENIZER)
-from transformers.models.deberta_v2 import DebertaV2TokenizerFast
 
 red_font = Fore.RED
 blue_font = Fore.BLUE
@@ -36,7 +32,6 @@ warnings.filterwarnings("ignore")
 
 # CUDA가 구체적인 에러를 보고하도록 설정
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-
 
 
 def run_training(
@@ -77,8 +72,8 @@ def run_training(
 
         # eval
         avg_val_loss, predictions = valid_fn(
-            CFG, valid_loader, model, criterion, epoch, scheduler, CFG.model_param.device)
-
+            CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
+        
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -121,7 +116,7 @@ def run_training(
 
         print()
 
-    predictions = torch.load(PATH,
+    predictions = torch.load(PATH, 
                              map_location=torch.device('cpu'))['predictions']
     val_folds[[i for i in range(CFG.max_len)]] = predictions
 
@@ -145,12 +140,9 @@ def get_result(oof_df, CFG):
 
 
 def main(CFG):
-    root_save_dir = '../checkpoint'
-    CFG.tokenizer = DebertaV2TokenizerFast.from_pretrained(BERT_MODEL_LIST[CFG.model_param.model_name])
-    
-    #tokenizer 저장
-    CFG.tokenizer.save_pretrained(os.path.join(root_save_dir, 'get_token'))
-    
+    CFG.tokenizer = AutoTokenizer.from_pretrained(
+        BERT_MODEL_LIST[CFG.model_param.model_name]
+    )
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 
     wandb.login(key=CFG.program_param.wandb_key)
@@ -160,6 +152,7 @@ def main(CFG):
     HASH_NAME = id_generator(size=12)
 
     # 모델 저장 경로
+    root_save_dir = '../checkpoint'
     save_dir = os.path.join(root_save_dir, CFG.model_param.model_name)
     os.makedirs(save_dir, exist_ok=True)
 
@@ -169,7 +162,7 @@ def main(CFG):
 
     # 데이터프레임
     train_df, features, patient_notes = get_train()
-    
+
     # 데이터 전처리
     train_df = preprocessing_incorrect(train_df)
 
@@ -177,11 +170,8 @@ def main(CFG):
     train_df = get_folded_dataframe(
         train_df,
         CFG.train_param.n_fold,
+        CFG.train_param.kfold_type,
     )
-
-    # Check error
-    if CFG.train_param.debug:
-        train_df = train_df.sample(n=1000).reset_index(drop=True)
 
     CFG.max_len = get_maxlen(features, patient_notes, CFG)
     # train_df.to_csv('../input/train_df.csv')
@@ -261,8 +251,8 @@ def main(CFG):
         print()
 
     # Prediction for oof save
-    oof_df_ = oof_df_.reset_index(drop=True)
-    oof_df_.to_pickle(f'{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_oof_df.pkl')
+    oof_df_ = oof_df_.reset_index(drop=True)    
+    oof_df_.to_pickle(root_save_dir +'/deberta/oof_df.pkl')
 
 if __name__ == '__main__':
 
