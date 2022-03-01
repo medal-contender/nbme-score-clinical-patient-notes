@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import yaml
 from sklearn.metrics import f1_score, precision_recall_fscore_support
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedKFold
 from tqdm.auto import tqdm
 
 
