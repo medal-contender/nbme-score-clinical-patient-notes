@@ -36,11 +36,11 @@ class NBMEModel(torch.nn.Module):
 
         if model_type == 'large':
             self.classifier = torch.nn.Sequential(
-                    nn.Linear(self.config.hidden_size, self.config.hidden_size),
-                    nn.LayerNorm(self.config.hidden_size),
+                    nn.Linear(self.config.hidden_size, 512),
+                    nn.LayerNorm(512),
                     nn.Dropout(0.2),
                     nn.ReLU(),
-                    nn.Linear(self.config.hidden_size, 1),
+                    nn.Linear(512, 1),
                 )
         else:
             self.classifier = torch.nn.Sequential(
