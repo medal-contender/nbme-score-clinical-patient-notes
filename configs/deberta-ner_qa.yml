@@ -1,0 +1,47 @@
+program_param:
+  wandb_key:
+  project_name: nbme
+
+data_param:
+  dir_name: nbme-score-clinical-patient-notes
+  k_folds: 5
+  max_seq_length: 512
+  pad_to_max_length: False
+
+model_param:
+  model_name: deberta-v3
+  mix_precision: True
+  num_classes: 1
+  num_cycles: 0.5
+  device: cuda
+  drop_p: 0.2
+  num_warmup_steps: 0
+  is_extra_attn: True
+  is_deeper_attn: True
+  n_fold: 5
+
+train_param:
+  do_train: True
+  do_eval: True
+  do_predict: True
+  output_dir: "../models"
+  seed: 42
+  per_device_train_batch_size: 4
+  per_device_eval_batch_size: 6
+  gradient_accumulation_steps: 8
+  learning_rate: 2e-5
+  weight_decay: 0.01
+  num_train_epochs: 5
+  lr_scheduler_type: "cosine_with_restarts"
+  warmup_ratio: 0.1
+  logging_steps: 75
+  evaluation_strategy: "epoch"
+  save_strategy: "no"
+  fp16: False
+  group_by_length: True
+
+valid_param:
+  batch_size: 64
+  num_workers: 6
+  shuffle: False
+  pin_memory: True
