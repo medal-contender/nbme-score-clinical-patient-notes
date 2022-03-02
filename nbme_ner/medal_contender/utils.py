@@ -10,7 +10,7 @@ import pandas as pd
 from glob import glob
 from tqdm.auto import tqdm
 from sklearn.metrics import f1_score
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedKFold
 
 # For Group K-Fold Strategy
 
@@ -149,14 +149,22 @@ def get_train(csv_path='../input/nbme-score-clinical-patient-notes/train.csv'):
     return train, features, patient_notes
 
 
-def get_folded_dataframe(df, n_splits):
-    fold = GroupKFold(n_splits=n_splits)
-    groups = df['pn_num'].values
-    for num, (train_index, val_index) in enumerate(fold.split(df, df['location'], groups)):
-        df.loc[val_index, 'fold'] = int(num)
-    df['fold'] = df['fold'].astype(int)
-    # print(df.groupby('fold').size())
-    return df
+def get_folded_dataframe(df, n_splits, kfold_type):
+    if kfold_type == 'skf':
+        skf = StratifiedKFold(n_splits=n_splits)
+        df["stratify_on"] = df["case_num"].astype(str) + df["feature_num"].astype(str)
+        df["fold"] = -1
+        for fold, (_, valid_idx) in enumerate(skf.split(df["id"], y=df["stratify_on"])):
+            df.loc[valid_idx, "fold"] = fold
+        return df
+
+    elif kfold_type == 'group':
+        fold = GroupKFold(n_splits=n_splits)
+        groups = df['pn_num'].values
+        for num, (train_index, val_index) in enumerate(fold.split(df, df['location'], groups)):
+            df.loc[val_index, 'fold'] = int(num)
+        df['fold'] = df['fold'].astype(int)
+        return df
 
 
 def get_best_model(save_dir):

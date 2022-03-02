@@ -18,6 +18,7 @@ model_param:
   num_warmup_steps: 0
   is_extra_attn: True
   is_deeper_attn: True
+  kfold_type : skf # skf : stratifiedkfold / group : groupkfold
   n_fold: 5
 
 train_param:

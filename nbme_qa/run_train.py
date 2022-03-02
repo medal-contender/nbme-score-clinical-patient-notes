@@ -42,6 +42,7 @@ def run_training(
     return
 
 def main(CFG):
+    print(BERT_MODEL_LIST[cfg.model_param.model_name])
     CFG.tokenizer = AutoTokenizer.from_pretrained(
         f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}"
     )
@@ -72,6 +73,7 @@ def main(CFG):
     train_df = get_folded_dataframe(
         train_df,
         CFG.train_param.n_fold,
+        CFG.train_param.kfold_type,
     )
 
     CFG.max_len = get_maxlen(features, patient_notes, CFG)

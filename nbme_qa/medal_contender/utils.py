@@ -43,15 +43,22 @@ def get_train(csv_path='../input/nbme-score-clinical-patient-notes/train.csv'):
 
     return train, features, patient_notes
 
-def get_folded_dataframe(merged, n_splits):
-    skf = StratifiedKFold(n_splits=n_splits)
-    merged["stratify_on"] = merged["case_num"].astype(str) + merged["feature_num"].astype(str)
-    merged["fold"] = -1
+def get_folded_dataframe(df, n_splits, kfold_type):
+    if kfold_type == 'skf':
+        skf = StratifiedKFold(n_splits=n_splits)
+        df["stratify_on"] = df["case_num"].astype(str) + df["feature_num"].astype(str)
+        df["fold"] = -1
+        for fold, (_, valid_idx) in enumerate(skf.split(df["id"], y=df["stratify_on"])):
+            df.loc[valid_idx, "fold"] = fold
+        return df
 
-    for fold, (_, valid_idx) in enumerate(skf.split(merged["id"], y=merged["stratify_on"])):
-        merged.loc[valid_idx, "fold"] = fold
-    
-    return merged
+    elif kfold_type == 'group':
+        fold = GroupKFold(n_splits=n_splits)
+        groups = df['pn_num'].values
+        for num, (train_index, val_index) in enumerate(fold.split(df, df['location'], groups)):
+            df.loc[val_index, 'fold'] = int(num)
+        df['fold'] = df['fold'].astype(int)
+        return df
 
 def get_best_model(save_dir):
     model_list = glob(save_dir + '/*.bin')
