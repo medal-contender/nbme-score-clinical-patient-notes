@@ -1,14 +1,14 @@
-import itertools
-import time
-import math
-import torch
-import torch.nn as nn
+from itertools import chain
+from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
+import torch
+import torch.nn as nn
 from torch.cuda.amp import autocast, GradScaler
-from medal_contender.dataset import TrainDataset, get_location_predictions, calculate_char_CV
-from medal_contender.model import NBMEModel
+from sklearn.metrics import precision_recall_fscore_support
+from medal_contender.utils import span_micro_f1
+
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -27,99 +27,159 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def train_fn(dataframe, CFG, fold, save_dir):
-    
-    # get dataloader
-    train = dataframe[dataframe["fold"] != fold].reset_index(drop=True)
-    valid = dataframe[dataframe["fold"] == fold].reset_index(drop=True)
-    train_ds = TrainDataset(CFG, train)
-    valid_ds = TrainDataset(CFG, valid)
-    train_dl = torch.utils.data.DataLoader(train_ds, batch_size=CFG.train_param.batch_size, 
-                                           pin_memory=True, shuffle=True, drop_last=True)
-    valid_dl = torch.utils.data.DataLoader(valid_ds, batch_size=CFG.train_param.batch_size * 2, 
-                                           pin_memory=True, shuffle=False, drop_last=False)
-    
-    # get model
-    model = NBMEModel(CFG, config_path=None, pretrained=True).to(CFG.model_param.device)
-    optimizer = torch.optim.AdamW(
-            model.parameters(),
-            lr=float(CFG.train_param.lr),
-            weight_decay=float(CFG.train_param.weight_decay)
+def train_fn(CFG, fold, train_loader, model, criterion, optimizer, epoch, scheduler, device):
+    model.train()
+    scaler = GradScaler(enabled=CFG.train_param.apex)
+    losses = AverageMeter()
+    global_step = 0
+    dataset_size = 0
+    running_loss = 0.0
+
+    tbar = tqdm(enumerate(train_loader), total=len(train_loader))
+    for step, batch in tbar:
+        input_ids = batch[0].to(CFG.model_param.device)
+        attention_mask = batch[1].to(CFG.model_param.device)
+        labels = batch[2].to(CFG.model_param.device)
+        batch_size = labels.size(0)
+        with autocast(enabled=CFG.train_param.apex):
+            y_preds = model(input_ids, attention_mask)
+        loss = criterion(y_preds, labels)
+        loss = torch.masked_select(loss, labels > -1).mean()
+        if CFG.train_param.gradient_accumulation_steps > 1:
+            loss = loss / CFG.train_param.gradient_accumulation_steps
+        losses.update(loss.item(), batch_size)
+        scaler.scale(loss).backward()
+
+        grad_norm = torch.nn.utils.clip_grad_norm_(
+            model.parameters(), CFG.train_param.max_grad_norm)
+        if (step + 1) % CFG.train_param.gradient_accumulation_steps == 0:
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
+            global_step += 1
+            if CFG.train_param.batch_scheduler:
+                if not CFG.model_param.scheduler == 'rlrp':
+                    scheduler.step()
+        
+        running_loss += (loss.item() * batch_size)
+        dataset_size += batch_size
+        epoch_loss = running_loss / dataset_size
+        tbar.set_postfix(
+            Epoch=epoch,
+            Train_Loss=epoch_loss,
+            Grad_Norm=grad_norm.item(),
+            LR=optimizer.param_groups[0]['lr']
         )
-    loss_fn = torch.nn.BCEWithLogitsLoss(reduction="none")
-    
-    history = {"train": [], "valid": []}
-    best_loss = np.inf
-    
-    torch.cuda.empty_cache()
+    return losses.avg
 
-    # training
-    for epoch in range(CFG.train_param.epochs):
-        model.train()
-        train_loss = AverageMeter()
-        pbar = tqdm(train_dl)
-        for i, batch in enumerate(pbar):
-            input_ids = batch[0].to(CFG.model_param.device)
-            attention_mask = batch[1].to(CFG.model_param.device)
-            labels = batch[2].to(CFG.model_param.device)
-            logits = model(input_ids, attention_mask)
-            loss = loss_fn(logits, labels)
-            loss = torch.masked_select(loss, labels > -1).mean()
-            loss /= CFG.train_param.gradient_accumulation_steps
-            loss.backward()
-            if (i+1) % CFG.train_param.gradient_accumulation_steps == 0: 
-                optimizer.step()
-                optimizer.zero_grad()
-            train_loss.update(val=loss.item(), n=len(input_ids))
-            pbar.set_postfix(Loss=train_loss.avg)
-        print(f"EPOCH: {epoch} train loss: {train_loss.avg}")
-        history["train"].append(train_loss.avg)
-        
-        # evaluation
-        model.eval()
-        valid_loss = AverageMeter()
-        pbar = tqdm(valid_dl)
-        with torch.no_grad():
-            for i, batch in enumerate(pbar):
-                input_ids = batch[0].to(CFG.model_param.device)
-                attention_mask = batch[1].to(CFG.model_param.device)
-                labels = batch[2].to(CFG.model_param.device)
-                logits = model(input_ids, attention_mask)
-                loss = loss_fn(logits, labels)
-                loss = torch.masked_select(loss, labels > -1).mean()
-                valid_loss.update(val=loss.item(), n=len(input_ids))
-                pbar.set_postfix(Loss=valid_loss.avg)
-        print(f"EPOCH: {epoch} valid loss: {valid_loss.avg}")
-        history["valid"].append(valid_loss.avg)
-
-        # save model
-        if valid_loss.avg < best_loss:
-            best_loss = valid_loss.avg
-            torch.save(model.state_dict(), f"{save_dir}/nbme_{fold}.pth")
-        
-    # evaluation summary
-    model.load_state_dict(torch.load( f"{save_dir}/nbme_{fold}.pth", map_location = CFG.model_param.device))
+def valid_fn(CFG, valid_loader, model, criterion, epoch, scheduler, device):
+    losses = AverageMeter()
     model.eval()
     preds = []
     offsets = []
     seq_ids = []
     lbls = []
-    with torch.no_grad():
-        for batch in tqdm(valid_dl):
-            input_ids = batch[0].to(CFG.model_param.device)
-            attention_mask = batch[1].to(CFG.model_param.device)
-            labels = batch[2].to(CFG.model_param.device)
-            offset_mapping = batch[3]
-            sequence_ids = batch[4]
-            logits = model(input_ids, attention_mask)
-            preds.append(logits.cpu().numpy())
-            offsets.append(offset_mapping.numpy())
-            seq_ids.append(sequence_ids.numpy())
-            lbls.append(labels.cpu().numpy())
+    dataset_size = 0
+    running_loss = 0.0
+    tbar = tqdm(enumerate(valid_loader), total=len(valid_loader))
+    
+    for step, batch in tbar:
+        input_ids = batch[0].to(CFG.model_param.device)
+        attention_mask = batch[1].to(CFG.model_param.device)
+        labels = batch[2].to(CFG.model_param.device)
+        
+        offset_mapping = batch[3]
+        sequence_ids = batch[4]
+        batch_size = labels.size(0)
+
+        with torch.no_grad():
+            y_preds = model(input_ids, attention_mask)
+        loss = criterion(y_preds, labels)
+        loss = torch.masked_select(loss, labels > -1).mean()
+        if CFG.train_param.gradient_accumulation_steps > 1:
+            loss = loss / CFG.train_param.gradient_accumulation_steps
+        losses.update(loss.item(), batch_size)
+
+        preds.append(y_preds.cpu().numpy())
+        offsets.append(offset_mapping.numpy())
+        seq_ids.append(sequence_ids.numpy())
+        lbls.append(labels.cpu().numpy())
+        
+
+        running_loss += (loss.item() * batch_size)
+        dataset_size += batch_size
+        epoch_loss = running_loss / dataset_size
+        tbar.set_postfix(
+            Epoch=epoch,
+            Valid_Loss=epoch_loss,
+        )
+        if CFG.model_param.scheduler == 'rlrp':
+            scheduler.step(epoch_loss)
+        
     preds = np.concatenate(preds, axis=0)
     offsets = np.concatenate(offsets, axis=0)
     seq_ids = np.concatenate(seq_ids, axis=0)
     lbls = np.concatenate(lbls, axis=0)
-    location_preds = get_location_predictions(preds, offsets, seq_ids, test=False)
-    score = calculate_char_CV(location_preds, offsets, seq_ids, lbls)
-    print(f"Fold: {fold} CV score: {score}")
+    '''
+    pred shape:  (184, 466)
+    offsets shape:  (184, 466, 2)
+    seq_ids shape:  (184, 466)
+    '''
+
+    return losses.avg, preds, offsets, seq_ids, lbls
+
+
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+
+def get_location_predictions(preds, offset_mapping, sequence_ids, test = False):
+    all_predictions = []
+    for pred, offsets, seq_ids in zip(preds, offset_mapping, sequence_ids):
+        pred = sigmoid(pred)
+        start_idx = None
+        current_preds = []
+        for p, o, s_id in zip(pred, offsets, seq_ids):
+            if s_id is None or s_id == 0:
+                continue
+            if p > 0.5:
+                if start_idx is None:
+                    start_idx = o[0]
+                end_idx = o[1]
+            elif start_idx is not None:
+                if test:
+                    current_preds.append(f"{start_idx} {end_idx}")
+                else:
+                    current_preds.append((start_idx, end_idx))
+                start_idx = None
+        if test:
+            all_predictions.append("; ".join(current_preds))
+        else:
+            all_predictions.append(current_preds)
+    return all_predictions
+
+
+def calculate_char_CV(predictions, offset_mapping, sequence_ids, labels):
+    all_labels = []
+    all_preds = []
+    for preds, offsets, seq_ids, labels in zip(predictions, offset_mapping, sequence_ids, labels):
+        num_chars = max(list(chain(*offsets)))
+        char_labels = np.zeros((num_chars))
+        for o, s_id, label in zip(offsets, seq_ids, labels):
+            if s_id is None or s_id == 0:
+                continue
+            if int(label) == 1:
+                char_labels[o[0]:o[1]] = 1
+        char_preds = np.zeros((num_chars))
+        for start_idx, end_idx in preds:
+            char_preds[start_idx:end_idx] = 1
+        all_labels.extend(char_labels)
+        all_preds.extend(char_preds)
+    # score = span_micro_f1(all_labels, all_preds)
+    score = precision_recall_fscore_support(all_labels, all_preds, average = "binary")
+    result = {
+        "precision": score[0],
+        "recall": score[1],
+        "f1": score[2]
+    }
+    return result['f1'] # f1 score

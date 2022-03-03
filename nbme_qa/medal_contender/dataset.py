@@ -1,13 +1,7 @@
-import ast
 import numpy as np
-from itertools import chain
 import torch
 from torch.utils.data import Dataset, DataLoader
-from sklearn.metrics import precision_recall_fscore_support
-from tqdm.auto import tqdm
 
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
 
 def loc_list_to_ints(loc_list):
     to_return = []
@@ -71,68 +65,17 @@ class TrainDataset(Dataset):
 
         return input_ids, attention_mask, labels, offset_mapping, sequence_ids
 
-def get_location_predictions(preds, offset_mapping, sequence_ids, test = False):
-    all_predictions = []
-    for pred, offsets, seq_ids in zip(preds, offset_mapping, sequence_ids):
-        pred = sigmoid(pred)
-        start_idx = None
-        current_preds = []
-        for p, o, s_id in zip(pred, offsets, seq_ids):
-            if s_id is None or s_id == 0:
-                continue
-            if p > 0.5:
-                if start_idx is None:
-                    start_idx = o[0]
-                end_idx = o[1]
-            elif start_idx is not None:
-                if test:
-                    current_preds.append(f"{start_idx} {end_idx}")
-                else:
-                    current_preds.append((start_idx, end_idx))
-                start_idx = None
-        if test:
-            all_predictions.append("; ".join(current_preds))
-        else:
-            all_predictions.append(current_preds)
-    return all_predictions
 
+def prepare_loaders_qa_task(dataframe, CFG, fold):
+    train = dataframe[dataframe["fold"] != fold].reset_index(drop=True)
+    valid = dataframe[dataframe["fold"] == fold].reset_index(drop=True)
+    train_fold_len = len(train)
+    
+    train_ds = TrainDataset(CFG, train)
+    valid_ds = TrainDataset(CFG, valid)
+    train_loader = DataLoader(train_ds, batch_size=CFG.train_param.batch_size, 
+                                        pin_memory=True, shuffle=True, drop_last=True)
+    valid_loader = DataLoader(valid_ds, batch_size=CFG.train_param.batch_size * 2, 
+                                        pin_memory=True, shuffle=False, drop_last=False)
 
-def calculate_char_CV(predictions, offset_mapping, sequence_ids, labels):
-    all_labels = []
-    all_preds = []
-    for preds, offsets, seq_ids, labels in zip(predictions, offset_mapping, sequence_ids, labels):
-        num_chars = max(list(chain(*offsets)))
-        char_labels = np.zeros((num_chars))
-        for o, s_id, label in zip(offsets, seq_ids, labels):
-            if s_id is None or s_id == 0:
-                continue
-            if int(label) == 1:
-                char_labels[o[0]:o[1]] = 1
-        char_preds = np.zeros((num_chars))
-        for start_idx, end_idx in preds:
-            char_preds[start_idx:end_idx] = 1
-        all_labels.extend(char_labels)
-        all_preds.extend(char_preds)
-    results = precision_recall_fscore_support(all_labels, all_preds, average = "binary")
-    return {
-        "precision": results[0],
-        "recall": results[1],
-        "f1": results[2]
-    }
-
-def compute_metrics(p):
-    predictions, y_true = p
-    y_true = y_true.astype(int)
-    y_pred = [
-        [int(p > 0.5) for (p, l) in zip(pred, label) if l != -100]
-        for pred, label in zip(predictions, y_true)
-    ]
-    y_true = [
-        [l for l in label if l != -100] for label in y_true
-    ]
-    results = precision_recall_fscore_support(list(chain(*y_true)), list(chain(*y_pred)), average = "binary")
-    return {
-        "token_precision": results[0],
-        "token_recall": results[1],
-        "token_f1": results[2]
-    }
+    return train_loader, valid_loader, train_fold_len
