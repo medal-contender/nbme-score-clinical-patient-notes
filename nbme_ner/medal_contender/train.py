@@ -71,7 +71,8 @@ def train_fn(CFG, fold, train_loader, model, criterion, optimizer, epoch, schedu
             optimizer.zero_grad()
             global_step += 1
             if CFG.train_param.batch_scheduler:
-                scheduler.step()
+                if not CFG.model_param.scheduler == 'rlrp':
+                    scheduler.step()
 
         running_loss += (loss.item() * batch_size)
         dataset_size += batch_size
@@ -85,7 +86,7 @@ def train_fn(CFG, fold, train_loader, model, criterion, optimizer, epoch, schedu
     return losses.avg
 
 
-def valid_fn(CFG, valid_loader, model, criterion, device, epoch):
+def valid_fn(CFG, valid_loader, model, criterion, epoch, scheduler, device):
     losses = AverageMeter()
     model.eval()
     preds = []
@@ -113,6 +114,8 @@ def valid_fn(CFG, valid_loader, model, criterion, device, epoch):
             Epoch=epoch,
             Valid_Loss=epoch_loss,
         )
+        if CFG.model_param.scheduler == 'rlrp':
+            scheduler.step(epoch_loss)
     predictions = np.concatenate(preds)
     return losses.avg, predictions
 

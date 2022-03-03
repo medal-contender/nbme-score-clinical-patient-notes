@@ -5,13 +5,19 @@ from transformers import AutoModel, AutoConfig
 from transformers import get_linear_schedule_with_warmup, get_cosine_schedule_with_warmup
 from medal_contender.configs import SCHEDULER_LIST, BERT_MODEL_LIST
 
+def init_params(module_lst):
+    for module in module_lst:
+        for param in module.parameters():
+            if param.dim() > 1:
+                torch.nn.init.xavier_uniform_(param)
+    return
 
 class NBMEModel(nn.Module):
     def __init__(self, cfg, config_path=None, pretrained=False):
         super().__init__()
         self.cfg = cfg
         model_name = BERT_MODEL_LIST[self.cfg.model_param.model_name]
-
+        model_type = 'base' if 'base' in BERT_MODEL_LIST[cfg.model_param.model_name] else 'large'
         if config_path is None:
             self.config = AutoConfig.from_pretrained(
                 model_name, output_hidden_states=True)
@@ -23,21 +29,25 @@ class NBMEModel(nn.Module):
         else:
             self.model = AutoModel(self.config)
         self.fc_dropout = nn.Dropout(cfg.train_param.fc_dropout)
-        self.fc = nn.Linear(self.config.hidden_size, 1)
-        self._init_weights(self.fc)
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
+        # self.fc = nn.Linear(self.config.hidden_size, 1)
+        
+        if model_type == 'large':
+            self.classifier = torch.nn.Sequential(
+                    nn.Linear(self.config.hidden_size, self.config.hidden_size),
+                    nn.LayerNorm(self.config.hidden_size),
+                    nn.Dropout(0.2),
+                    nn.ReLU(),
+                    nn.Linear(self.config.hidden_size, 1),
+                )
+        else:
+            self.classifier = torch.nn.Sequential(
+                    nn.Linear(self.config.hidden_size, 256),
+                    nn.LayerNorm(256),
+                    nn.Dropout(0.2),
+                    nn.ReLU(),
+                    nn.Linear(256, 1),
+                )
+        init_params([self.classifier])
 
     def feature(self, inputs):
         outputs = self.model(**inputs)
@@ -46,7 +56,7 @@ class NBMEModel(nn.Module):
 
     def forward(self, inputs):
         feature = self.feature(inputs)
-        output = self.fc(self.fc_dropout(feature))
+        output = self.classifier(feature)
         return output
 
 
@@ -121,7 +131,9 @@ def fetch_scheduler(optimizer, cfg, num_train_steps=None):
     elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'ReduceLROnPlateau':
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode='min', min_lr=cfg.train_param.min_lr
+            mode='min',
+            patience=2,
+            min_lr=float(cfg.train_param.min_lr)
         )
     elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CyclicLR':
         scheduler = lr_scheduler.CyclicLR(
