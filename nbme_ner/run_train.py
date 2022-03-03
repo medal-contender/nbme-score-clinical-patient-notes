@@ -172,6 +172,14 @@ def main(CFG):
         CFG.train_param.n_fold,
         CFG.train_param.kfold_type,
     )
+    
+    # Debug
+    if CFG.train_param.debug:
+        train_df = train_df.sample(n=500).reset_index(drop=True)
+        CFG.max_len = 466
+        CFG.train_param.epochs = 1
+    else:
+        CFG.max_len = get_maxlen(features, patient_notes, CFG)
 
     CFG.max_len = get_maxlen(features, patient_notes, CFG)
     # train_df.to_csv('../input/train_df.csv')

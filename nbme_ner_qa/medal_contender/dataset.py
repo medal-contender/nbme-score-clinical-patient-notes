@@ -243,6 +243,12 @@ def preprocess_train(CFG):
 
 def get_tokenized_dataset(tokenizer, CFG):
     merged = preprocess_train(CFG)
+    
+    # Debug
+    if CFG.train_param.debug:
+        merged = merged.sample(n=500).reset_index(drop=True)
+        CFG.train_param.num_train_epochs = 1
+
     dataset = Dataset.from_pandas(merged)
     dataset = dataset.rename_column("pn_history", "text")
     tokenized_dataset = dataset.map(
