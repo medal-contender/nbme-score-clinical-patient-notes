@@ -432,3 +432,23 @@ _Pvt_Extensions
 
 # FAKE - F# Make
 .fake/
+
+# ignore cloudflared
+/tmp
+/bin
+.idea
+.build
+.vscode
+\#*\#
+cscope.*
+/cloudflared
+/cloudflared.pkg
+/cloudflared.exe
+/cloudflared.msi
+/cloudflared-x86-64*
+/packaging
+.DS_Store
+*-session.log
+ssh_server_tests/.env
+/.cover
+built_artifacts/
