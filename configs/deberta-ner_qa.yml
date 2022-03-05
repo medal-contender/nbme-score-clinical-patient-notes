@@ -22,6 +22,7 @@ model_param:
   n_fold: 5
 
 train_param:
+  debug: False
   do_train: True
   do_eval: True
   do_predict: True

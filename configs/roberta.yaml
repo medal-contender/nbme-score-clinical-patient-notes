@@ -7,8 +7,6 @@ data_param:
   dir_name: nbme-score-clinical-patient-notes
 
 model_param:
-  debug: False
-  epochs: 5
   model_name: roberta
   scheduler: cosine
   mix_precision: True
@@ -21,6 +19,7 @@ model_param:
   is_deeper_attn: True
 
 train_param:
+  debug: False
   epochs: 5
   lr: 1e-5
   max_lr: 0.1
@@ -29,11 +28,11 @@ train_param:
   decoder_lr: 2e-5
   eps: 1e-6
   betas: (0.9, 0.999)
-  batch_size: 4
+  batch_size: 16
   fc_dropout: 0.2
   max_len:
   weight_decay: 0.01
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 4
   max_grad_norm: 1000
   num_workers: 0
   kfold_type : skf # skf : stratifiedkfold / group : groupkfold

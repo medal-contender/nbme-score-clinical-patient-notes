@@ -7,8 +7,6 @@ data_param:
   dir_name: nbme-score-clinical-patient-notes
 
 model_param:
-  debug: False
-  epochs: 5
   model_name: deberta
   scheduler: cosine
   mix_precision: True
@@ -21,8 +19,8 @@ model_param:
   is_deeper_attn: True
 
 train_param:
-  debug: True
-  epochs: 1
+  debug: False
+  epochs: 5
   lr: 2e-5
   max_lr: 0.1
   min_lr: 1e-6

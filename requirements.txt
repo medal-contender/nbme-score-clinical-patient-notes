@@ -37,7 +37,7 @@ importlib-metadata==4.10.0
 importlib-resources==5.4.0
 iopath==0.1.9
 ipykernel==6.6.1
-ipython==7.31.0
+ipython
 jedi==0.18.1
 joblib==1.1.0
 jupyter-client==7.1.0
@@ -51,7 +51,7 @@ multidict==5.2.0
 munch==2.5.0
 nest-asyncio==1.5.4
 Nuitka==0.6.17.3
-numpy==1.19.2
+numpy
 oauthlib==3.1.1
 omegaconf==2.1.1
 openpyxl==3.0.9
