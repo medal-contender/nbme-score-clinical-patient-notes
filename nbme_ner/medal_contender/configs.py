@@ -1,7 +1,7 @@
 # Config 설정
 BERT_MODEL_LIST = {
     "deberta": "microsoft/deberta-v3-large",
-
+    "roberta": "roberta-base",
 }
 
 MAKE_TOKENIZER= {
