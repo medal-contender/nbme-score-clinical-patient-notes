@@ -142,7 +142,8 @@ def get_result(oof_df, CFG):
 def main(CFG):
     print(BERT_MODEL_LIST[cfg.model_param.model_name])
     CFG.tokenizer = AutoTokenizer.from_pretrained(
-        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}"
+        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
+        trim_offsets=CFG.model_param.trim_offsets
     )
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 

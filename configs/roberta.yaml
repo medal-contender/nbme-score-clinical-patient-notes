@@ -17,6 +17,7 @@ model_param:
   num_warmup_steps: 0
   is_extra_attn: True
   is_deeper_attn: True
+  trim_offsets : False
 
 train_param:
   debug: False
