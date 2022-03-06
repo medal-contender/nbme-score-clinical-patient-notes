@@ -72,7 +72,7 @@ def run_training(
 
         # eval
         avg_val_loss, predictions = valid_fn(
-            CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
+            CFG, valid_loader, model, criterion, epoch, scheduler, CFG.model_param.device)
         
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
@@ -140,8 +140,9 @@ def get_result(oof_df, CFG):
 
 
 def main(CFG):
+    print(BERT_MODEL_LIST[cfg.model_param.model_name])
     CFG.tokenizer = AutoTokenizer.from_pretrained(
-        BERT_MODEL_LIST[CFG.model_param.model_name],
+        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
         trim_offsets=CFG.model_param.trim_offsets
     )
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
@@ -181,9 +182,6 @@ def main(CFG):
         CFG.train_param.epochs = 1
     else:
         CFG.max_len = get_maxlen(features, patient_notes, CFG)
-
-    CFG.max_len = get_maxlen(features, patient_notes, CFG)
-    # train_df.to_csv('../input/train_df.csv')
 
     # 학습 진행
     oof_df_ = pd.DataFrame()
@@ -261,7 +259,7 @@ def main(CFG):
 
     # Prediction for oof save
     oof_df_ = oof_df_.reset_index(drop=True)    
-    oof_df_.to_pickle(root_save_dir +'/deberta/oof_df.pkl')
+    oof_df_.to_pickle(save_dir +'/oof_df.pkl')
 
 if __name__ == '__main__':
 
