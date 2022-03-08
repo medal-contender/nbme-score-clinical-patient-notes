@@ -16,7 +16,7 @@ from medal_contender.utils import (
 from medal_contender.preprocessing import preprocessing_incorrect
 from medal_contender.configs import BERT_MODEL_LIST
 from medal_contender.dataset import prepare_loaders
-from medal_contender.model import NBMEModel, fetch_scheduler, get_optimizer_params
+from medal_contender.model import NBMEModel, DeepShareModel, fetch_scheduler, get_optimizer_params
 from medal_contender.train import (
     train_fn, valid_fn, get_predictions, get_char_probs, get_results
 )
@@ -203,8 +203,10 @@ def main(CFG):
 
         train_loader, valid_loader, valid_texts, valid_labels, valid_fold_len, train_fold_len, val_folds = \
             prepare_loaders(train_df, CFG, fold)
-
-        model = NBMEModel(CFG, config_path=None, pretrained=True)
+        if CFG.train_param.model_type == "Attention":
+            model = NBMEModel(CFG, config_path=None, pretrained=True)
+        elif CFG.train_param.model_type == "DeepShareModel":
+            model = DeepShareModel(CFG, config_path=None, pretrained=True)
         model.to(CFG.model_param.device)
 
         # optimizer_parameters = get_optimizer_params(

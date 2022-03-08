@@ -19,6 +19,7 @@ model_param:
   is_deeper_attn: True
 
 train_param:
+  model_type : Attention # ['Attention', 'DeepShareModel']
   debug: False
   epochs: 5
   lr: 2e-5
