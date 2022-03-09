@@ -1,5 +1,5 @@
 import argparse
-import gc
+import shutil
 import os
 import warnings
 
@@ -33,6 +33,7 @@ def main(CFG):
     root_save_dir = '../checkpoint/NER_QA'
     save_dir = os.path.join(root_save_dir, CFG.model_param.model_name)
     os.makedirs(save_dir, exist_ok=True)
+    tmp_output_dir = f'{save_dir}/tmp'
 
     model_path = BERT_MODEL_LIST[CFG.model_param.model_name]
 
@@ -48,13 +49,13 @@ def main(CFG):
         tokenizer,
         pad_to_multiple_of=8 if CFG.train_param.fp16 else None,
         padding=True,
-        max_length=CFG.data_param.max_seq_length,
+        max_length=int(CFG.data_param.max_seq_length),
     )
 
     tokenized_dataset = get_tokenized_dataset(tokenizer, CFG)
 
     training_args = TrainingArguments(
-        output_dir=CFG.train_param.output_dir,
+        output_dir=tmp_output_dir,
         do_train=bool(CFG.train_param.do_train),
         do_eval=bool(CFG.train_param.do_eval),
         do_predict=bool(CFG.train_param.do_predict),
@@ -77,6 +78,7 @@ def main(CFG):
         report_to="wandb",
         group_by_length=bool(CFG.train_param.group_by_length),
         disable_tqdm=False,
+        load_best_model_at_end=True,
     )
 
     # Initialize our Trainer
@@ -112,13 +114,13 @@ def main(CFG):
             f"{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.train_param.lr_scheduler_type}_FOLD_{fold}"
         trainer.save_model(save_path)
         run.finish()
+
+        shutil.rmtree(tmp_output_dir)
         print()
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
-
     parser.add_argument(
         "--config-file",
         type=str,
@@ -136,7 +138,6 @@ if __name__ == '__main__':
         default='hyperparameter_tuning',
         help="Type Keyword Of This Training."
     )
-
     args = parser.parse_args()
 
     cfg = ConfigManager(args).cfg
