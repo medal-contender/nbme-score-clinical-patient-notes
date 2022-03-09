@@ -2,6 +2,11 @@
 BERT_MODEL_LIST = {
     "deberta": "microsoft/deberta-base",
     "deberta-v3": "microsoft/deberta-v3-base",
+    "electra": "../models/electra-base-discriminator",
+    "roberta": "../models/roberta-base",
+    "roberta-large": "../models/roberta-large",
+    "deberta-large": "microsoft/deberta-large",
+    "electra-large": "google/electra-large-discriminator",
 }
 
 SCHEDULER_LIST = {

@@ -2,6 +2,8 @@
 BERT_MODEL_LIST = {
     "deberta": "microsoft/deberta-v3-large",
     "roberta": "roberta-base",
+    "deberta-v3": "microsoft/deberta-v3-base",
+
 }
 
 MAKE_TOKENIZER= {
