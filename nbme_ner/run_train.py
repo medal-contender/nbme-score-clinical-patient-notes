@@ -22,6 +22,9 @@ from medal_contender.train import (
 )
 from colorama import Fore, Style
 
+# load_tokenizer(MAKE_TOKENIZER)
+from transformers.models.deberta_v2 import DebertaV2TokenizerFast
+
 red_font = Fore.RED
 blue_font = Fore.BLUE
 yellow_font = Fore.YELLOW
@@ -73,7 +76,7 @@ def run_training(
         # eval
         avg_val_loss, predictions = valid_fn(
             CFG, valid_loader, model, criterion, epoch, scheduler, CFG.model_param.device)
-        
+
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -116,7 +119,7 @@ def run_training(
 
         print()
 
-    predictions = torch.load(PATH, 
+    predictions = torch.load(PATH,
                              map_location=torch.device('cpu'))['predictions']
     val_folds[[i for i in range(CFG.max_len)]] = predictions
 
@@ -140,11 +143,12 @@ def get_result(oof_df, CFG):
 
 
 def main(CFG):
-    print(BERT_MODEL_LIST[cfg.model_param.model_name])
-    CFG.tokenizer = AutoTokenizer.from_pretrained(
-        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
-        trim_offsets=CFG.model_param.trim_offsets
-    )
+    root_save_dir = '../checkpoint'
+    CFG.tokenizer = DebertaV2TokenizerFast.from_pretrained(BERT_MODEL_LIST[CFG.model_param.model_name])
+
+    #tokenizer 저장
+    CFG.tokenizer.save_pretrained(os.path.join(root_save_dir, 'get_token'))
+
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 
     wandb.login(key=CFG.program_param.wandb_key)
@@ -174,7 +178,7 @@ def main(CFG):
         CFG.train_param.n_fold,
         CFG.train_param.kfold_type,
     )
-    
+
     # Debug
     if CFG.train_param.debug:
         train_df = train_df.sample(n=500).reset_index(drop=True)
@@ -260,7 +264,7 @@ def main(CFG):
         print()
 
     # Prediction for oof save
-    oof_df_ = oof_df_.reset_index(drop=True)    
+    oof_df_ = oof_df_.reset_index(drop=True)
     oof_df_.to_pickle(save_dir +'/oof_df.pkl')
 
 if __name__ == '__main__':
