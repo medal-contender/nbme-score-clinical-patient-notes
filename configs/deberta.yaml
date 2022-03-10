@@ -1,5 +1,5 @@
 program_param:
-  wandb_key: 
+  wandb_key: b41fa9bf3a38422dafc16e253d84694489607e9f
   project_name: nbme
   seed: 42
 
@@ -33,7 +33,7 @@ train_param:
   fc_dropout: 0.2
   max_len:
   weight_decay: 0.01
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 8
   max_grad_norm: 1000
   num_workers: 0
   kfold_type : skf # skf : stratifiedkfold / group : groupkfold

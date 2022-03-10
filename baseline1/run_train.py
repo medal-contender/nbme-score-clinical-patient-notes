@@ -265,7 +265,9 @@ def main(CFG):
 
     # Prediction for oof save
     oof_df_ = oof_df_.reset_index(drop=True)
-    oof_df_.to_pickle(save_dir +'/oof_df.pkl')
+    oof_df_.to_pickle(
+        f'{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_oof_df.pkl')
+
 
 if __name__ == '__main__':
 
