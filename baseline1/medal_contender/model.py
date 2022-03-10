@@ -59,7 +59,6 @@ class NBMEModel(nn.Module):
         output = self.classifier(feature)
         return output
 
-
 def get_optimizer_params(model, encoder_lr, decoder_lr, weight_decay=0.0):
     param_optimizer = list(model.named_parameters())
     no_decay = ["bias", "LayerNorm.bias", "LayerNorm.weight"]
