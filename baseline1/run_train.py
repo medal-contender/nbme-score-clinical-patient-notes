@@ -22,7 +22,13 @@ from medal_contender.train import (
 )
 from colorama import Fore, Style
 
-# load_tokenizer(MAKE_TOKENIZER)
+# To make tokenizer in new environment, please operate the code below (3 line)
+'''
+from medal_contender.tokenizer import load_tokenizer
+from medal_contender.configs import MAKE_TOKENIZER
+load_tokenizer(MAKE_TOKENIZER)
+'''
+
 from transformers.models.deberta_v2 import DebertaV2TokenizerFast
 
 red_font = Fore.RED
@@ -35,6 +41,9 @@ warnings.filterwarnings("ignore")
 
 # CUDA가 구체적인 에러를 보고하도록 설정
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
+# Tokenizer parallelism을 사용하도록 환경 설정
+os.environ["TOKENIZERS_PARALLELISM"] = "true" 
 
 
 def run_training(
