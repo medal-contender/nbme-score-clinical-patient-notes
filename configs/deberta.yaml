@@ -1,5 +1,5 @@
 program_param:
-  wandb_key: 
+  wandb_key: b41fa9bf3a38422dafc16e253d84694489607e9f
   project_name: nbme
   seed: 42
 
@@ -7,8 +7,6 @@ data_param:
   dir_name: nbme-score-clinical-patient-notes
 
 model_param:
-  debug: False
-  epochs: 5
   model_name: deberta
   scheduler: cosine
   mix_precision: True
@@ -21,8 +19,9 @@ model_param:
   is_deeper_attn: True
 
 train_param:
-  debug: True
-  epochs: 1
+  model_type : Attention # ['Attention', 'DeepShareModel']
+  debug: False
+  epochs: 5
   lr: 2e-5
   max_lr: 0.1
   min_lr: 1e-6
@@ -34,7 +33,7 @@ train_param:
   fc_dropout: 0.2
   max_len:
   weight_decay: 0.01
-  gradient_accumulation_steps: 1
+  gradient_accumulation_steps: 8
   max_grad_norm: 1000
   num_workers: 0
   kfold_type : skf # skf : stratifiedkfold / group : groupkfold

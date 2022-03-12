@@ -1,7 +1,8 @@
 # Config 설정
 BERT_MODEL_LIST = {
     "deberta": "microsoft/deberta-base",
-    "deberta-v3": "microsoft/deberta-v3-base",
+    "bioclinicalbert": "emilyalsentzer/Bio_ClinicalBERT",
+    "roberta": "roberta-base",
 }
 
 SCHEDULER_LIST = {

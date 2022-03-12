@@ -16,11 +16,20 @@ from medal_contender.utils import (
 from medal_contender.preprocessing import preprocessing_incorrect
 from medal_contender.configs import BERT_MODEL_LIST
 from medal_contender.dataset import prepare_loaders
-from medal_contender.model import NBMEModel, fetch_scheduler, get_optimizer_params
+from medal_contender.model import NBMEModel, DeepShareModel, fetch_scheduler, get_optimizer_params
 from medal_contender.train import (
     train_fn, valid_fn, get_predictions, get_char_probs, get_results
 )
 from colorama import Fore, Style
+
+# To make tokenizer in new environment, please operate the code below (3 line)
+'''
+from medal_contender.tokenizer import load_tokenizer
+from medal_contender.configs import MAKE_TOKENIZER
+load_tokenizer(MAKE_TOKENIZER)
+'''
+
+from transformers.models.deberta_v2 import DebertaV2TokenizerFast
 
 red_font = Fore.RED
 blue_font = Fore.BLUE
@@ -32,6 +41,9 @@ warnings.filterwarnings("ignore")
 
 # CUDA가 구체적인 에러를 보고하도록 설정
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+
+# Tokenizer parallelism을 사용하도록 환경 설정
+os.environ["TOKENIZERS_PARALLELISM"] = "true" 
 
 
 def run_training(
@@ -72,8 +84,8 @@ def run_training(
 
         # eval
         avg_val_loss, predictions = valid_fn(
-            CFG, valid_loader, model, criterion, CFG.model_param.device, epoch)
-        
+            CFG, valid_loader, model, criterion, epoch, scheduler, CFG.model_param.device)
+
         predictions = predictions.reshape((valid_fold_len, CFG.max_len))
 
         # scoring
@@ -116,7 +128,7 @@ def run_training(
 
         print()
 
-    predictions = torch.load(PATH, 
+    predictions = torch.load(PATH,
                              map_location=torch.device('cpu'))['predictions']
     val_folds[[i for i in range(CFG.max_len)]] = predictions
 
@@ -140,9 +152,12 @@ def get_result(oof_df, CFG):
 
 
 def main(CFG):
-    CFG.tokenizer = AutoTokenizer.from_pretrained(
-        BERT_MODEL_LIST[CFG.model_param.model_name]
-    )
+    root_save_dir = '../checkpoint'
+    CFG.tokenizer = DebertaV2TokenizerFast.from_pretrained(BERT_MODEL_LIST[CFG.model_param.model_name])
+
+    #tokenizer 저장
+    CFG.tokenizer.save_pretrained(os.path.join(root_save_dir, 'get_token'))
+
     CFG.group = f'{CFG.program_param.project_name}.{CFG.model_param.model_name}.{CFG.training_keyword}'
 
     wandb.login(key=CFG.program_param.wandb_key)
@@ -173,8 +188,13 @@ def main(CFG):
         CFG.train_param.kfold_type,
     )
 
-    CFG.max_len = get_maxlen(features, patient_notes, CFG)
-    # train_df.to_csv('../input/train_df.csv')
+    # Debug
+    if CFG.train_param.debug:
+        train_df = train_df.sample(n=500).reset_index(drop=True)
+        CFG.max_len = 466
+        CFG.train_param.epochs = 1
+    else:
+        CFG.max_len = get_maxlen(features, patient_notes, CFG)
 
     # 학습 진행
     oof_df_ = pd.DataFrame()
@@ -196,8 +216,10 @@ def main(CFG):
 
         train_loader, valid_loader, valid_texts, valid_labels, valid_fold_len, train_fold_len, val_folds = \
             prepare_loaders(train_df, CFG, fold)
-
-        model = NBMEModel(CFG, config_path=None, pretrained=True)
+        if CFG.train_param.model_type == "Attention":
+            model = NBMEModel(CFG, config_path=None, pretrained=True)
+        elif CFG.train_param.model_type == "DeepShareModel":
+            model = DeepShareModel(CFG, config_path=None, pretrained=True)
         model.to(CFG.model_param.device)
 
         # optimizer_parameters = get_optimizer_params(
@@ -251,8 +273,10 @@ def main(CFG):
         print()
 
     # Prediction for oof save
-    oof_df_ = oof_df_.reset_index(drop=True)    
-    oof_df_.to_pickle(root_save_dir +'/deberta/oof_df.pkl')
+    oof_df_ = oof_df_.reset_index(drop=True)
+    oof_df_.to_pickle(
+        f'{save_dir}/[{CFG.training_keyword.upper()}]_SCHEDULER_{CFG.model_param.scheduler}_oof_df.pkl')
+
 
 if __name__ == '__main__':
 
