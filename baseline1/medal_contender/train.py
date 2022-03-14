@@ -73,6 +73,8 @@ def train_fn(CFG, fold, train_loader, model, criterion, optimizer, epoch, schedu
             if CFG.train_param.batch_scheduler:
                 if not CFG.model_param.scheduler == 'rlrp':
                     scheduler.step()
+                if CFG.model_param.scheduler == 'cos_ann_warm_cus':
+                    scheduler.step(epoch=epoch)
 
         running_loss += (loss.item() * batch_size)
         dataset_size += batch_size
