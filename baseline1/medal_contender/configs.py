@@ -14,6 +14,7 @@ MAKE_TOKENIZER= {
 SCHEDULER_LIST = {
     "cos_ann": 'CosineAnnealingLR',
     "cos_ann_warm": 'CosineAnnealingWarmRestarts',
+    "cos_ann_warm_cus": 'CosineAnnealingWarmUpRestartsCustom',
     "lambda":"LambdaLR",
     "multiple":"MultiplicativeLR",
     "step":"StepLR",
