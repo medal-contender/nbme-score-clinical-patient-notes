@@ -21,7 +21,8 @@ model_param:
 train_param:
   model_type : DeepShareModel # ['Attention', 'DeepShareModel']
   debug: False
-  epochs: 20
+  add_correct: True
+  epochs: 10
   lr: 1e-6
   max_lr: 1e-4
   min_lr: 1e-6

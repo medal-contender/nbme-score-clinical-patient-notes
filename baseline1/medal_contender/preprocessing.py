@@ -3,7 +3,7 @@ import pandas as pd
 import ast
 
 # incorrect annotation
-def preprocessing_incorrect(train):
+def preprocessing_incorrect(train, add_correct=True):
     train.loc[338, 'annotation'] = ast.literal_eval(
         '[["father heart attack"]]')
     train.loc[338, 'location'] = ast.literal_eval('[["764 783"]]')
@@ -177,6 +177,78 @@ def preprocessing_incorrect(train):
         '[["headache generalized in her head"]]')
     train.loc[14083, 'location'] = ast.literal_eval('[["56 64;156 179"]]')
 
+    
+    ## Additional findings
+    if add_correct:
+        # case_num 0
+        train.loc[120, 'annotation'] = ast.literal_eval(
+            '[["episodes"], ["episode"]]')
+        train.loc[120, 'location'] = ast.literal_eval('[["100 108"], ["312 319"]]')
+        train.loc[159, 'annotation'] = ast.literal_eval(
+            '[["1-2 times perweeek"], ["episodes"], ["episode"]]')
+        train.loc[159, 'location'] = ast.literal_eval('[["177 195"], ["220 228"], ["337 344"]]')
+        train.loc[172, 'annotation'] = ast.literal_eval(
+            '[["episode"]]')
+        train.loc[172, 'location'] = ast.literal_eval('[["67 75"]]')
+        train.loc[185, 'annotation'] = ast.literal_eval(
+            '[["episode"]]')
+        train.loc[185, 'location'] = ast.literal_eval('[["192 199"]]')
+        train.loc[223, 'annotation'] = ast.literal_eval(
+            '[["pressure"]]')
+        train.loc[223, 'location'] = ast.literal_eval('[["206 214"]]')
+        train.loc[224, 'annotation'] = ast.literal_eval(
+            '[["5-6 episodes"], ["comes and goes, self resolves"]]')
+        train.loc[224, 'location'] = ast.literal_eval('[["117 129"], ["145 174"]]')
+        train.loc[315, 'annotation'] = ast.literal_eval(
+            '[["episodes"], ["Episodes"], ["sporadic"]]')
+        train.loc[315, 'location'] = ast.literal_eval('[["100 108"], ["276 284"], ["289 297"]]')
+        train.loc[328, 'annotation'] = ast.literal_eval(
+            '[["episode"]]')
+        train.loc[328, 'location'] = ast.literal_eval('[["159 167"]]')
+        train.loc[465, 'annotation'] = ast.literal_eval(
+            '[["For the past month"]]')
+        train.loc[465, 'location'] = ast.literal_eval('[["67 85"]]')
+        train.loc[688, 'annotation'] = ast.literal_eval(
+            '[["m"]]')
+        train.loc[688, 'location'] = ast.literal_eval('[["13 14"]]')
+        
+        
+        # #case_num 1
+        # train.loc[1959, 'annotation'] = ast.literal_eval(
+        #     '[[""]]')
+        # train.loc[1959, 'location'] = ast.literal_eval('[[""]]')
+        
+        
+        #case_num 2
+        train.loc[2829, 'annotation'] = ast.literal_eval(
+            '[["F"]]')
+        train.loc[2829, 'location'] = ast.literal_eval('[["6 7"]]')
+        train.loc[2837, 'annotation'] = ast.literal_eval(
+            '[["44 yo"]]')
+        train.loc[2837, 'location'] = ast.literal_eval('[["0 5"]]')
+        train.loc[2842, 'annotation'] = ast.literal_eval(
+            '[["vaginal dryness"]]')
+        train.loc[2842, 'location'] = ast.literal_eval('[["635 650"]]')
+        train.loc[2982, 'annotation'] = ast.literal_eval(
+            '[["Mrs"], ["female"]]')
+        train.loc[2982, 'location'] = ast.literal_eval('[["0 3"], ["26 32"]]')
+        train.loc[2993, 'annotation'] = ast.literal_eval(
+            '[["IUD"], ["IUD"]]')
+        train.loc[2993, 'location'] = ast.literal_eval('[["421 424"], ["454 457"]]')
+        train.loc[3085, 'annotation'] = ast.literal_eval(
+            '[["stress"]]')
+        train.loc[3085, 'location'] = ast.literal_eval('[["890 896"]]')
+        train.loc[3305, 'annotation'] = ast.literal_eval(
+            '[["f"], ["G2P2 woman"]]')
+        train.loc[3305, 'location'] = ast.literal_eval('[["15 16"], ["481 491"]]')
+        train.loc[3388, 'annotation'] = ast.literal_eval(
+            '[["nausea and vomiting one week ago"]]')
+        train.loc[3388, 'location'] = ast.literal_eval('[["465 497"]]')
+        train.loc[3396, 'annotation'] = ast.literal_eval(
+            '[["sweating"]]')
+        train.loc[3396, 'location'] = ast.literal_eval('[["345 353"]]')
+
+        
     train['annotation_length'] = train['annotation'].apply(len)
 
     return train
