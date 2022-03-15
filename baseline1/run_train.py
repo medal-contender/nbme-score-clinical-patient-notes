@@ -179,7 +179,7 @@ def main(CFG):
     train_df, features, patient_notes = get_train()
 
     # 데이터 전처리
-    train_df = preprocessing_incorrect(train_df)
+    train_df = preprocessing_incorrect(train_df, add_correct=CFG.train_param.add_correct)
 
     # K Fold
     train_df = get_folded_dataframe(
