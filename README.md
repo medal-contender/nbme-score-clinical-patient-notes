@@ -80,7 +80,7 @@ You can set `launch.json` for vscode as follow:
 
 Pytorch version may vary depanding on your hardware configurations.
 
-### Installation with virtual environment (Windows)
+### Installation with virtual environment
 
 ```bash
 git clone https://github.com/medal-contender/nbme-score-clinical-patient-notes.git
@@ -96,11 +96,6 @@ Run this in WSL (or WSL2)
 
 ```bash
 ./download_pretrained_models.sh
-```
-
-### Installation (MacOS)
-
-```bash
 ```
 
 ### To update the code
