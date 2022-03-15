@@ -249,6 +249,6 @@ def preprocessing_incorrect(train, add_correct=True):
         train.loc[3396, 'location'] = ast.literal_eval('[["345 353"]]')
 
         
-        train['annotation_length'] = train['annotation'].apply(len)
+    train['annotation_length'] = train['annotation'].apply(len)
 
     return train
