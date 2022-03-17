@@ -10,7 +10,8 @@ from transformers import AutoConfig, AutoTokenizer, TrainingArguments
 import wandb
 from medal_contender.configs import BERT_MODEL_LIST
 from medal_contender.dataset import CustomDataCollator, get_tokenized_dataset
-from medal_contender.model import get_model
+from medal_contender.model_attention import get_model
+# from medal_contender.model import get_model
 from medal_contender.train import NBMETrainer
 from medal_contender.utils import ConfigManager, compute_metrics, id_generator
 
@@ -82,7 +83,7 @@ def main(CFG):
     )
 
     # Initialize our Trainer
-    for fold in range(CFG.model_param.n_fold):
+    for fold in range(CFG.data_param.k_folds):
         print(f"{yellow_font}====== Fold: {fold} ======{reset_all}")
         model = get_model(model_path, config)
 
