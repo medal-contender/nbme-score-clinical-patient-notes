@@ -10,8 +10,6 @@ from transformers import AutoConfig, AutoTokenizer, TrainingArguments
 import wandb
 from medal_contender.configs import BERT_MODEL_LIST
 from medal_contender.dataset import CustomDataCollator, get_tokenized_dataset
-from medal_contender.model_attention import get_model
-# from medal_contender.model import get_model
 from medal_contender.train import NBMETrainer
 from medal_contender.utils import ConfigManager, compute_metrics, id_generator
 
@@ -39,6 +37,12 @@ def main(CFG):
     model_path = BERT_MODEL_LIST[CFG.model_param.model_name]
 
     config = AutoConfig.from_pretrained(model_path)
+    if CFG.train_param.model_type == 'Attention':
+        from medal_contender.model_attention import get_model
+    elif CFG.train_param.model_type == 'DeepShareModel':
+        from medal_contender.model_deepshare import get_model
+    else:
+        from medal_contender.model import get_model
 
     if "deberta-v2" in model_path or "deberta-v3" in model_path:
         from transformers.models.deberta_v2 import DebertaV2TokenizerFast
