@@ -1,6 +1,7 @@
 from ast import literal_eval
 from dataclasses import dataclass
 from functools import partial
+import re
 
 import pandas as pd
 import torch
@@ -8,6 +9,21 @@ from datasets import Dataset
 from sklearn.model_selection import StratifiedKFold
 from transformers import DataCollatorForTokenClassification
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+
+
+def process_feature_text(text):
+    text = re.sub('I-year', '1-year', text)
+    text = re.sub('-OR-', " or ", text)
+    text = re.sub('-', ' ', text)
+    return text
+
+
+def clean_spaces(txt):
+    txt = re.sub('\n', ' ', txt)
+    txt = re.sub('\t', ' ', txt)
+    txt = re.sub('\r', ' ', txt)
+#     txt = re.sub(r'\s+', ' ', txt)
+    return txt
 
 
 def loc_list_to_ints(loc_list):
@@ -237,13 +253,19 @@ def preprocess_train(CFG):
     merged["feature_text"] = [
         process_feature_text(x) for x in merged["feature_text"]]
 
+    merged['pn_history'] = merged['pn_history'].apply(lambda x: x.strip())
+    merged['feature_text'] = merged['feature_text'].apply(process_feature_text)
+
+    merged['feature_text'] = merged['feature_text'].apply(clean_spaces)
+    merged['clean_text'] = merged['pn_history'].apply(clean_spaces)
+
     return merged[["id", "case_num", "pn_num", "feature_num", "loc_list",
                    "pn_history", "feature_text", "fold"]]
 
 
 def get_tokenized_dataset(tokenizer, CFG):
     merged = preprocess_train(CFG)
-    
+
     # Debug
     if CFG.train_param.debug:
         merged = merged.sample(n=500).reset_index(drop=True)
