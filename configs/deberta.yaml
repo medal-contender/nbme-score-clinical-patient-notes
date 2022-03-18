@@ -1,5 +1,5 @@
 program_param:
-  wandb_key: b41fa9bf3a38422dafc16e253d84694489607e9f
+  wandb_key: 
   project_name: nbme
   seed: 42
 
@@ -8,7 +8,7 @@ data_param:
 
 model_param:
   model_name: deberta
-  scheduler: cosine
+  scheduler: cos_ann_warm_cus #cosine
   mix_precision: True
   num_classes: 1
   num_cycles: 0.5
@@ -19,30 +19,34 @@ model_param:
   is_deeper_attn: True
 
 train_param:
-  model_type : Attention # ['Attention', 'DeepShareModel']
+  model_type : DeepShareModel # ['Attention', 'DeepShareModel']
   debug: False
-  epochs: 5
-  lr: 2e-5
-  max_lr: 0.1
+  add_correct: True
+  epochs: 10
+  lr: 1e-6
+  max_lr: 1e-4
   min_lr: 1e-6
   encoder_lr: 2e-5
   decoder_lr: 2e-5
   eps: 1e-6
   betas: (0.9, 0.999)
-  batch_size: 4
+  batch_size: 24
   fc_dropout: 0.2
   max_len:
   weight_decay: 0.01
-  gradient_accumulation_steps: 8
+  gradient_accumulation_steps: 1 #8
   max_grad_norm: 1000
-  num_workers: 0
+  num_workers: 4
   kfold_type : skf # skf : stratifiedkfold / group : groupkfold
   n_fold: 5
   trn_fold: [0, 1, 2, 3, 4]
   save_dir: checkpoint/deberta
   loss: BCEWithLogitsLoss
   T_max: 500
-  T_0: 50
+  T_0: 5
+  T_multi: 1
+  gamma : 0.5
+  T_up: 5
   reduce_ratio: 0.95
   apex: True
   batch_scheduler: True
