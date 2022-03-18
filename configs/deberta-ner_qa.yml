@@ -22,6 +22,7 @@ model_param:
   n_fold: 5
 
 train_param:
+  model_type : # ['Attention', 'DeepShareModel']
   debug: False
   do_train: True
   do_eval: True

@@ -7,6 +7,7 @@ BERT_MODEL_LIST = {
     "roberta-large": "../models/roberta-large",
     "deberta-large": "microsoft/deberta-large",
     "electra-large": "google/electra-large-discriminator",
+    "pubmedbert-base": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
 }
 
 SCHEDULER_LIST = {
