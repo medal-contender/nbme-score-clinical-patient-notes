@@ -13,10 +13,10 @@ from medal_contender.dataset import CustomDataCollator, get_tokenized_dataset
 from medal_contender.train import NBMETrainer
 from medal_contender.utils import ConfigManager, compute_metrics, id_generator
 
-red_font = Fore.RED
-blue_font = Fore.BLUE
-yellow_font = Fore.YELLOW
-reset_all = Style.RESET_ALL
+RED_FONT = Fore.RED
+BLUE_FONT = Fore.BLUE
+YELLOW_FONT = Fore.YELLOW
+STYLE_RESET_ALL = Style.RESET_ALL
 
 # 경고 억제
 warnings.filterwarnings("ignore")
@@ -88,7 +88,7 @@ def main(CFG):
 
     # Initialize our Trainer
     for fold in range(CFG.data_param.k_folds):
-        print(f"{yellow_font}====== Fold: {fold} ======{reset_all}")
+        print(f"{YELLOW_FONT}====== Fold: {fold} ======{STYLE_RESET_ALL}")
         model = get_model(model_path, config)
 
         run = wandb.init(
