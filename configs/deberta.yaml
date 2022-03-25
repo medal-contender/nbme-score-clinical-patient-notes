@@ -50,6 +50,7 @@ train_param:
   reduce_ratio: 0.95
   apex: True
   batch_scheduler: True
+  patience : 6
 
 valid_param:
   batch_size: 64
