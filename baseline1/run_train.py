@@ -106,7 +106,9 @@ def run_training(
             "Valid Score": score,
             "Valid Pred": preds
         })
-
+        # EarlyStopping
+        patience_cnt = 0
+        
         # 베스트 모델 저장
         if score > best_score:
             print(
@@ -118,12 +120,17 @@ def run_training(
             else:
                 os.remove(best_file)
                 best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_score:.4f}.pth'
-
+                patience_cnt += 1
+                print('EarlyStopping counter: {} out of {}'.format(patience_cnt, cfg.train_param.patience))
+                
             run.summary["Best Loss"] = best_score
             PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_score:.4f}.pth"
             # 모델 저장
             torch.save({'model': model.state_dict(),
                         'predictions': predictions}, PATH)
+            if patience_cnt > patience:
+                print('EarlyStopping counter: {} out of {}'.format(patience_cnt, cfg.train_param.patience))
+                break
             print(f"{red_font} Best Score {best_score} Model Saved{reset_all}")
 
         print()
@@ -197,6 +204,7 @@ def main(CFG):
         CFG.max_len = get_maxlen(features, patient_notes, CFG)
 
     # 학습 진행
+    
     oof_df_ = pd.DataFrame()
     for fold in range(0, CFG.train_param.n_fold):
 

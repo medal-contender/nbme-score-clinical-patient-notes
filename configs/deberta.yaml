@@ -8,7 +8,7 @@ data_param:
 
 model_param:
   model_name: deberta
-  scheduler: cos_ann_warm_cus #cosine
+  scheduler: CosineAnnealingWarmupRestarts # cosine, CosineAnnealingWarmupRestarts
   mix_precision: True
   num_classes: 1
   num_cycles: 0.5
@@ -24,7 +24,7 @@ train_param:
   add_correct: True
   epochs: 10
   lr: 1e-6
-  max_lr: 1e-4
+  max_lr: 1e-5
   min_lr: 1e-6
   encoder_lr: 2e-5
   decoder_lr: 2e-5
@@ -50,6 +50,7 @@ train_param:
   reduce_ratio: 0.95
   apex: True
   batch_scheduler: True
+  patience : 6
 
 valid_param:
   batch_size: 64
