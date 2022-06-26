@@ -31,6 +31,11 @@ If successful, you'll help tackle the biggest practical barriers in patient note
 
 ---
 
+### Main Issues
+
+- Dataset review
+  1. ddddd
+
 ## Program
 
 - Fetch Pretrained Models
