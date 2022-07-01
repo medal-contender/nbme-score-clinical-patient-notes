@@ -30,6 +30,27 @@ If successful, you'll help tackle the biggest practical barriers in patient note
 - Submission Deadline - May 3, 2022
 
 ---
+## Task
+This task is a PIPELINE to experiment with PLM(Pretrained Language Model), which is often used in NLP tasks, and the following models are tested
+- RoBERTa
+- DeBERTa
+- Electra
+- LUKE
+
+In addition, we conducted experiments by modifying FC Layer of the each model.
+
+<div align="center">
+    <img src="https://user-images.githubusercontent.com/68190553/176803353-58a9e0db-349a-4cfb-a07f-a8daef6a1de7.png" width="60%"/>
+</div>
+
+### Baseline 1
+Baseline 1 is a task that predicts all tokens in the input and processes only tokens above the threshold, similar to the NER task in BERT.<br/>
+It is a task in which the model recognizes and predicts 'text' and 'text_feature' by organizing Dataset in order of [‘text’, 'text_feature’].
+
+### Baseline 2, 3
+Baseline 2, 3 is based on baseline 1, but similar to QA task, Dataset is organized in the order of ['text_feature’, 'text’].<br/>
+baseline 2 is a Pytorch-based code and baseline 3 is Transformer-based code.
+
 
 ## Program
 
