@@ -52,6 +52,38 @@ Baseline 2, 3 is based on baseline 1, but similar to QA task, Dataset is organiz
 baseline 2 is a Pytorch-based code and baseline 3 is Transformer-based code.
 
 
+### Main Issues
+
+- Dataset review
+  1. typo problem
+    - Many typos were found on a given dataset, and we solved these problems in the data preprocessing process.
+  2. Related Issues
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/76
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/75
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/74
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/63
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/52
+- Data Embedding
+  1. Tokenizer issue
+    - In the process of embedding data, we found that each tokenizer calculates the position of the offset differently. To solve this problem, we have tried methods such as implementing token positioning functions, char-based embeddings, and we have been able to confirm good performance.
+  2. Rlated Issues
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/66
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/44
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/37
+- Model performance
+  1. Scheduler
+    - We analyzed various studies and techniques related to schedulers in which the model can reach the global minimum, and applied the SOTA scheduler CosineAnnealingWarmupRestarts to improve model performance.
+  2. Model tuning
+    - To improve the performance of the model, I thought of a tuning method, and I improved the performance of the model by tuning the layer part.
+  3. Ensemble Strategy
+    - We discussed strategies for ensembling different models (Roberta, DeBERTa, etc.) because each model has a different structure and finally decided on three models to achieve the best performance.
+  4. Related Issues
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/30
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/7
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/pull/40
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/65
+    - https://github.com/medal-contender/nbme-score-clinical-patient-notes/issues/80
+
 ## Program
 
 - Fetch Pretrained Models
